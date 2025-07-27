@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍕 Test Hero Image Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+        }
+        .container {
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: rgba(0,255,0,0.2); border: 1px solid #00ff00; }
+        .error { background: rgba(255,0,0,0.2); border: 1px solid #ff0000; }
+        .info { background: rgba(0,0,255,0.2); border: 1px solid #0088ff; }
+        button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #e55a2b;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .log {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍕 Hero Image Upload Test</h1>
+        
+        <div class="test-section">
+            <h3>📋 Test Instructions</h3>
+            <p>This page tests the hero image upload functionality directly.</p>
+            <ol>
+                <li>Click "Test Connection" to verify Supabase connection</li>
+                <li>Select a pizza image file (JPG, PNG, GIF, WebP)</li>
+                <li>Click "Upload Test Image" to test upload</li>
+                <li>Check the results in the log below</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 Connection Test</h3>
+            <button onclick="testConnection()">Test Supabase Connection</button>
+            <button onclick="listBuckets()">List Storage Buckets</button>
+            <div id="connectionStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📤 Upload Test</h3>
+            <input type="file" id="fileInput" accept="image/*" />
+            <br>
+            <button onclick="uploadTestImage()">Upload Test Image</button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test Log</h3>
+            <div id="testLog" class="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Supabase configuration (same as the app)
+        const SUPABASE_URL = "https://sixnfemtvmighstbgrbd.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I";
+
+        // Import Supabase (using CDN for testing)
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+        
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logDiv.textContent += logEntry;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(message);
+        }
+
+        window.testConnection = async function() {
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.innerHTML = '<div class="info">🔄 Testing connection...</div>';
+            
+            try {
+                log('🔗 Testing Supabase connection...');
+                
+                // Test basic connection
+                const { data, error } = await supabase.from('settings').select('key').limit(1);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                log('✅ Database connection successful');
+                statusDiv.innerHTML = '<div class="success">✅ Connection successful!</div>';
+                
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`);
+                statusDiv.innerHTML = `<div class="error">❌ Connection failed: ${error.message}</div>`;
+            }
+        };
+
+        window.listBuckets = async function() {
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            try {
+                log('📦 Listing storage buckets...');
+                
+                const { data: buckets, error } = await supabase.storage.listBuckets();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                log(`📦 Found ${buckets.length} buckets:`);
+                buckets.forEach(bucket => {
+                    log(`  - ${bucket.name} (public: ${bucket.public})`);
+                });
+                
+                const uploadsExists = buckets.some(b => b.name === 'uploads');
+                if (uploadsExists) {
+                    log('✅ "uploads" bucket found!');
+                    statusDiv.innerHTML += '<div class="success">✅ "uploads" bucket exists!</div>';
+                } else {
+                    log('❌ "uploads" bucket not found!');
+                    statusDiv.innerHTML += '<div class="error">❌ "uploads" bucket missing!</div>';
+                }
+                
+            } catch (error) {
+                log(`❌ Failed to list buckets: ${error.message}`);
+                statusDiv.innerHTML += `<div class="error">❌ Bucket listing failed: ${error.message}</div>`;
+            }
+        };
+
+        window.uploadTestImage = async function() {
+            const fileInput = document.getElementById('fileInput');
+            const statusDiv = document.getElementById('uploadStatus');
+            
+            if (!fileInput.files[0]) {
+                statusDiv.innerHTML = '<div class="error">❌ Please select a file first!</div>';
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            statusDiv.innerHTML = '<div class="info">🔄 Uploading...</div>';
+            
+            try {
+                log(`📤 Starting upload of ${file.name} (${file.size} bytes)`);
+                
+                // Generate unique filename
+                const fileExt = file.name.split('.').pop();
+                const fileName = `test-${Date.now()}.${fileExt}`;
+                const filePath = `hero-images/${fileName}`;
+                
+                log(`📁 Upload path: uploads/${filePath}`);
+                
+                // Upload file
+                const { data, error } = await supabase.storage
+                    .from('uploads')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                log('✅ Upload successful!');
+                log(`📁 File path: ${data.path}`);
+                
+                // Get public URL
+                const { data: urlData } = supabase.storage
+                    .from('uploads')
+                    .getPublicUrl(filePath);
+                
+                log(`🌐 Public URL: ${urlData.publicUrl}`);
+                
+                statusDiv.innerHTML = `
+                    <div class="success">✅ Upload successful!</div>
+                    <div class="info">📁 Path: ${data.path}</div>
+                    <div class="info">🌐 URL: <a href="${urlData.publicUrl}" target="_blank" style="color: #88ff88;">${urlData.publicUrl}</a></div>
+                `;
+                
+            } catch (error) {
+                log(`❌ Upload failed: ${error.message}`);
+                statusDiv.innerHTML = `<div class="error">❌ Upload failed: ${error.message}</div>`;
+            }
+        };
+
+        window.clearLog = function() {
+            document.getElementById('testLog').textContent = '';
+        };
+
+        // Auto-test connection on load
+        window.addEventListener('load', () => {
+            log('🍕 Hero Image Upload Test initialized');
+            log('🔗 Ready to test Supabase connection and upload functionality');
+        });
+    </script>
+</body>
+</html>

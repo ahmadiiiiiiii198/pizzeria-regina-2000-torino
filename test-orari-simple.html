@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Orari Real-time Updates</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.open {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.closed {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .hours-display {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕒 Test Orari Real-time Updates</h1>
+    
+    <div class="container">
+        <h2>📊 Current Status</h2>
+        <div id="status" class="status">Loading...</div>
+        <div id="hours-display" class="hours-display">Loading business hours...</div>
+        
+        <button onclick="fetchBusinessHours()">🔄 Refresh Hours</button>
+        <button onclick="simulateUpdate()">🧪 Simulate Update</button>
+        <button onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <div class="container">
+        <h2>📋 Real-time Updates Log</h2>
+        <div id="log" class="log">Initializing real-time test...\n</div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+
+        const SUPABASE_URL = 'https://sixnfemtvmighstbgrbd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let businessHours = null;
+        let updateCount = 0;
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString('it-IT');
+            const logElement = document.getElementById('log');
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        async function fetchBusinessHours() {
+            try {
+                log('🔍 Fetching business hours from database...');
+
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('value, updated_at')
+                    .eq('key', 'businessHours')
+                    .single();
+
+                if (error) {
+                    throw error;
+                }
+
+                if (data?.value) {
+                    businessHours = data.value;
+                    log('✅ Business hours loaded successfully');
+                    updateDisplay();
+                    return businessHours;
+                } else {
+                    throw new Error('No business hours found');
+                }
+            } catch (error) {
+                log(`❌ Error fetching business hours: ${error.message}`);
+                return null;
+            }
+        }
+
+        function updateDisplay() {
+            if (!businessHours) return;
+
+            const statusDiv = document.getElementById('status');
+            const hoursDiv = document.getElementById('hours-display');
+
+            // Check if currently open
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const currentDay = dayNames[dayOfWeek];
+            const todayHours = businessHours[currentDay];
+
+            const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+            const isOpen = todayHours.isOpen &&
+                          currentTime >= todayHours.openTime &&
+                          currentTime <= todayHours.closeTime;
+
+            // Update status
+            statusDiv.className = `status ${isOpen ? 'open' : 'closed'}`;
+            statusDiv.textContent = isOpen
+                ? `🟢 APERTO - Orari di oggi: ${todayHours.openTime}-${todayHours.closeTime}`
+                : `🔴 CHIUSO - Orari di oggi: ${todayHours.openTime}-${todayHours.closeTime}`;
+
+            // Update hours display
+            let hoursText = '📅 Orari della settimana:\n';
+            const dayNamesIt = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            
+            dayNames.forEach((day, index) => {
+                const dayHours = businessHours[day];
+                const status = dayHours.isOpen ? 
+                    `${dayHours.openTime}-${dayHours.closeTime}` : 
+                    'CHIUSO';
+                hoursText += `${dayNamesIt[index]}: ${status}\n`;
+            });
+
+            hoursDiv.textContent = hoursText;
+        }
+
+        async function simulateUpdate() {
+            if (!businessHours) {
+                log('⚠️ No business hours loaded - fetching first...');
+                await fetchBusinessHours();
+                return;
+            }
+
+            log('🧪 Simulating business hours update...');
+            
+            try {
+                // Add a test timestamp to trigger update
+                const testUpdate = {
+                    ...businessHours,
+                    lastTestUpdate: new Date().toISOString()
+                };
+
+                const { error } = await supabase
+                    .from('settings')
+                    .update({
+                        value: testUpdate,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('key', 'businessHours');
+
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Update sent to database - waiting for real-time notification...');
+            } catch (error) {
+                log(`❌ Error simulating update: ${error.message}`);
+            }
+        }
+
+        // Set up real-time subscription
+        function setupRealTimeSubscription() {
+            log('📡 Setting up real-time subscription...');
+
+            const channel = supabase
+                .channel('orari-test-channel')
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'settings',
+                    filter: 'key=eq.businessHours'
+                }, (payload) => {
+                    updateCount++;
+                    log(`🔔 REAL-TIME UPDATE #${updateCount} RECEIVED!`);
+                    log(`📦 Event: ${payload.eventType}`);
+                    
+                    if (payload.new?.value) {
+                        log('✅ New business hours data received');
+                        businessHours = payload.new.value;
+                        updateDisplay();
+                        log('🔄 Display updated with new hours');
+                    }
+                })
+                .subscribe((status) => {
+                    log(`📡 Subscription status: ${status}`);
+                    
+                    if (status === 'SUBSCRIBED') {
+                        log('✅ Real-time subscription active!');
+                        log('🎯 Ready to receive business hours updates');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        log('❌ Real-time subscription failed');
+                    }
+                });
+
+            return channel;
+        }
+
+        // Initialize
+        window.fetchBusinessHours = fetchBusinessHours;
+        window.simulateUpdate = simulateUpdate;
+        window.clearLog = clearLog;
+
+        // Start the test
+        log('🚀 Starting real-time orari test...');
+        
+        // Set up real-time subscription first
+        const channel = setupRealTimeSubscription();
+        
+        // Then fetch initial data
+        setTimeout(() => {
+            fetchBusinessHours();
+        }, 1000);
+
+        // Auto-refresh display every 30 seconds
+        setInterval(() => {
+            if (businessHours) {
+                updateDisplay();
+            }
+        }, 30000);
+
+        log('📋 Test ready! Try clicking "Simulate Update" to test real-time updates');
+    </script>
+</body>
+</html>

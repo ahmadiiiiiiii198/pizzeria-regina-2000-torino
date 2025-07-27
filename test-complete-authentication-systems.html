@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Authentication Systems Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        .warning { background: rgba(255, 152, 0, 0.3); }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #45a049; }
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .auth-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .console-monitor {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Complete Authentication Systems Test</h1>
+    <p>Testing both client and admin authentication systems with database integration</p>
+
+    <div class="test-container">
+        <h2>📊 Authentication Systems Status</h2>
+        <div class="test-grid">
+            <div class="auth-section">
+                <h3>👤 Client Authentication (Supabase)</h3>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="clientUsers">--</div>
+                        <div>Users</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="clientProfiles">--</div>
+                        <div>Profiles</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="clientOrders">--</div>
+                        <div>User Orders</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="auth-section">
+                <h3>🛡️ Admin Authentication (Custom)</h3>
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="adminSessions">--</div>
+                        <div>Sessions</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="adminActivities">--</div>
+                        <div>Activities</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="adminSettings">--</div>
+                        <div>Settings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🧪 Database Tests</h2>
+        <div id="databaseResults"></div>
+        <button onclick="runDatabaseTests()">Test Database Schema</button>
+    </div>
+
+    <div class="test-container">
+        <h2>🔧 Function Tests</h2>
+        <div id="functionResults"></div>
+        <button onclick="runFunctionTests()">Test Auth Functions</button>
+    </div>
+
+    <div class="test-container">
+        <h2>🔒 Security Tests</h2>
+        <div id="securityResults"></div>
+        <button onclick="runSecurityTests()">Test RLS Policies</button>
+    </div>
+
+    <div class="test-container">
+        <h2>📝 Test Console</h2>
+        <div id="testConsole" class="console-monitor"></div>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        const SUPABASE_URL = 'https://sixnfemtvmighstbgrbd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('testConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#4fc3f7' : '#ffffff';
+            
+            console.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function addResult(containerId, type, message) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        function updateMetric(id, value) {
+            document.getElementById(id).textContent = value;
+        }
+
+        window.clearConsole = function() {
+            document.getElementById('testConsole').innerHTML = '';
+        }
+
+        window.runDatabaseTests = async function() {
+            document.getElementById('databaseResults').innerHTML = '';
+            logToConsole('🗄️ Starting database schema tests...', 'info');
+
+            try {
+                // Test user_profiles table
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('user_profiles')
+                    .select('*', { count: 'exact', head: true });
+
+                if (profilesError) {
+                    addResult('databaseResults', 'error', `❌ user_profiles table: ${profilesError.message}`);
+                    logToConsole(`user_profiles error: ${profilesError.message}`, 'error');
+                } else {
+                    addResult('databaseResults', 'success', `✅ user_profiles table: ${profiles?.length || 0} records`);
+                    updateMetric('clientProfiles', profiles?.length || 0);
+                    logToConsole(`user_profiles: ${profiles?.length || 0} records`, 'success');
+                }
+
+                // Test admin_sessions table
+                const { data: sessions, error: sessionsError } = await supabase
+                    .from('admin_sessions')
+                    .select('*', { count: 'exact', head: true });
+
+                if (sessionsError) {
+                    addResult('databaseResults', 'error', `❌ admin_sessions table: ${sessionsError.message}`);
+                    logToConsole(`admin_sessions error: ${sessionsError.message}`, 'error');
+                } else {
+                    addResult('databaseResults', 'success', `✅ admin_sessions table: ${sessions?.length || 0} records`);
+                    updateMetric('adminSessions', sessions?.length || 0);
+                    logToConsole(`admin_sessions: ${sessions?.length || 0} records`, 'success');
+                }
+
+                // Test admin_activity_log table
+                const { data: activities, error: activitiesError } = await supabase
+                    .from('admin_activity_log')
+                    .select('*', { count: 'exact', head: true });
+
+                if (activitiesError) {
+                    addResult('databaseResults', 'error', `❌ admin_activity_log table: ${activitiesError.message}`);
+                    logToConsole(`admin_activity_log error: ${activitiesError.message}`, 'error');
+                } else {
+                    addResult('databaseResults', 'success', `✅ admin_activity_log table: ${activities?.length || 0} records`);
+                    updateMetric('adminActivities', activities?.length || 0);
+                    logToConsole(`admin_activity_log: ${activities?.length || 0} records`, 'success');
+                }
+
+                // Test orders with user_id
+                const { data: userOrders, error: ordersError } = await supabase
+                    .from('orders')
+                    .select('*', { count: 'exact', head: true })
+                    .not('user_id', 'is', null);
+
+                if (ordersError) {
+                    addResult('databaseResults', 'error', `❌ user orders: ${ordersError.message}`);
+                    logToConsole(`user orders error: ${ordersError.message}`, 'error');
+                } else {
+                    addResult('databaseResults', 'success', `✅ user orders: ${userOrders?.length || 0} records`);
+                    updateMetric('clientOrders', userOrders?.length || 0);
+                    logToConsole(`user orders: ${userOrders?.length || 0} records`, 'success');
+                }
+
+                // Test admin settings
+                const { data: adminSettings, error: settingsError } = await supabase
+                    .from('settings')
+                    .select('*')
+                    .in('key', ['adminSecuritySettings', 'adminUISettings', 'adminCredentials']);
+
+                if (settingsError) {
+                    addResult('databaseResults', 'error', `❌ admin settings: ${settingsError.message}`);
+                    logToConsole(`admin settings error: ${settingsError.message}`, 'error');
+                } else {
+                    addResult('databaseResults', 'success', `✅ admin settings: ${adminSettings?.length || 0} settings`);
+                    updateMetric('adminSettings', adminSettings?.length || 0);
+                    logToConsole(`admin settings: ${adminSettings?.length || 0} settings`, 'success');
+                }
+
+                logToConsole('✅ Database schema tests completed', 'success');
+
+            } catch (error) {
+                addResult('databaseResults', 'error', `❌ Database test failed: ${error.message}`);
+                logToConsole(`Database test error: ${error.message}`, 'error');
+            }
+        }
+
+        window.runFunctionTests = async function() {
+            document.getElementById('functionResults').innerHTML = '';
+            logToConsole('⚙️ Starting function tests...', 'info');
+
+            try {
+                // Test create_admin_session function
+                const { data: sessionToken, error: sessionError } = await supabase
+                    .rpc('create_admin_session', {
+                        p_username: 'test_admin',
+                        p_ip_address: '127.0.0.1',
+                        p_user_agent: 'Test Browser'
+                    });
+
+                if (sessionError) {
+                    addResult('functionResults', 'error', `❌ create_admin_session: ${sessionError.message}`);
+                    logToConsole(`create_admin_session error: ${sessionError.message}`, 'error');
+                } else {
+                    addResult('functionResults', 'success', `✅ create_admin_session: Token created`);
+                    logToConsole(`create_admin_session: Token created successfully`, 'success');
+
+                    // Test validate_admin_session function
+                    const { data: isValid, error: validateError } = await supabase
+                        .rpc('validate_admin_session', {
+                            p_session_token: sessionToken
+                        });
+
+                    if (validateError) {
+                        addResult('functionResults', 'error', `❌ validate_admin_session: ${validateError.message}`);
+                        logToConsole(`validate_admin_session error: ${validateError.message}`, 'error');
+                    } else {
+                        addResult('functionResults', 'success', `✅ validate_admin_session: ${isValid ? 'Valid' : 'Invalid'}`);
+                        logToConsole(`validate_admin_session: ${isValid ? 'Valid' : 'Invalid'}`, 'success');
+                    }
+
+                    // Test invalidate_admin_session function
+                    const { data: invalidated, error: invalidateError } = await supabase
+                        .rpc('invalidate_admin_session', {
+                            p_session_token: sessionToken
+                        });
+
+                    if (invalidateError) {
+                        addResult('functionResults', 'error', `❌ invalidate_admin_session: ${invalidateError.message}`);
+                        logToConsole(`invalidate_admin_session error: ${invalidateError.message}`, 'error');
+                    } else {
+                        addResult('functionResults', 'success', `✅ invalidate_admin_session: ${invalidated ? 'Success' : 'Failed'}`);
+                        logToConsole(`invalidate_admin_session: ${invalidated ? 'Success' : 'Failed'}`, 'success');
+                    }
+                }
+
+                // Test cleanup function
+                const { data: cleanedCount, error: cleanupError } = await supabase
+                    .rpc('cleanup_expired_admin_sessions');
+
+                if (cleanupError) {
+                    addResult('functionResults', 'error', `❌ cleanup_expired_admin_sessions: ${cleanupError.message}`);
+                    logToConsole(`cleanup_expired_admin_sessions error: ${cleanupError.message}`, 'error');
+                } else {
+                    addResult('functionResults', 'success', `✅ cleanup_expired_admin_sessions: ${cleanedCount} cleaned`);
+                    logToConsole(`cleanup_expired_admin_sessions: ${cleanedCount} sessions cleaned`, 'success');
+                }
+
+                logToConsole('✅ Function tests completed', 'success');
+
+            } catch (error) {
+                addResult('functionResults', 'error', `❌ Function test failed: ${error.message}`);
+                logToConsole(`Function test error: ${error.message}`, 'error');
+            }
+        }
+
+        window.runSecurityTests = async function() {
+            document.getElementById('securityResults').innerHTML = '';
+            logToConsole('🔒 Starting security tests...', 'info');
+
+            try {
+                // Test RLS on user_profiles (should fail without auth)
+                const { data: profilesUnauth, error: profilesError } = await supabase
+                    .from('user_profiles')
+                    .select('*');
+
+                if (profilesError) {
+                    addResult('securityResults', 'success', `✅ user_profiles RLS: Properly blocked unauthorized access`);
+                    logToConsole('user_profiles RLS: Access properly blocked', 'success');
+                } else {
+                    addResult('securityResults', 'warning', `⚠️ user_profiles RLS: May have security issue`);
+                    logToConsole('user_profiles RLS: Unexpected access allowed', 'error');
+                }
+
+                // Test RLS on admin_sessions (should fail)
+                const { data: sessionsUnauth, error: sessionsError } = await supabase
+                    .from('admin_sessions')
+                    .select('*');
+
+                if (sessionsError) {
+                    addResult('securityResults', 'success', `✅ admin_sessions RLS: Properly blocked unauthorized access`);
+                    logToConsole('admin_sessions RLS: Access properly blocked', 'success');
+                } else {
+                    addResult('securityResults', 'warning', `⚠️ admin_sessions RLS: May have security issue`);
+                    logToConsole('admin_sessions RLS: Unexpected access allowed', 'error');
+                }
+
+                // Test RLS on admin_activity_log (should fail)
+                const { data: activitiesUnauth, error: activitiesError } = await supabase
+                    .from('admin_activity_log')
+                    .select('*');
+
+                if (activitiesError) {
+                    addResult('securityResults', 'success', `✅ admin_activity_log RLS: Properly blocked unauthorized access`);
+                    logToConsole('admin_activity_log RLS: Access properly blocked', 'success');
+                } else {
+                    addResult('securityResults', 'warning', `⚠️ admin_activity_log RLS: May have security issue`);
+                    logToConsole('admin_activity_log RLS: Unexpected access allowed', 'error');
+                }
+
+                logToConsole('✅ Security tests completed', 'success');
+
+            } catch (error) {
+                addResult('securityResults', 'error', `❌ Security test failed: ${error.message}`);
+                logToConsole(`Security test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run database tests on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                runDatabaseTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

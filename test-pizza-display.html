@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Display Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warning { color: #fbbf24; }
+        .info { color: #60a5fa; }
+        h1, h2, h3 { 
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 15px;
+        }
+        .pizza-count {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            margin: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍕 Pizzeria Regina 2000 - Pizza Display Test</h1>
+        <p>This tool tests if all pizzas are being displayed correctly on your website.</p>
+
+        <div class="test-section">
+            <h3>📊 Expected Pizza Counts</h3>
+            <div class="result">
+<span class="success">✅ Database contains:</span>
+<span class="pizza-count">🍕 Pizze Classiche: 19 pizzas</span>
+<span class="pizza-count">🌟 Pizze Speciali: 22 pizzas</span>
+<span class="pizza-count">🥤 Bevande: 6 drinks</span>
+
+<span class="info">📝 Pizza names in Pizze Classiche:</span>
+Bianca, Calzone, Capricciosa, Diavola, Focaccia al Crudo, Focaccia allo Speck, 
+Focaccia Primavera, Funghi, Margherita, Marinara, Napoli, Norma, Prosciutto, 
+Prosciutto e Funghi, Quattro Formaggi, Romana, Rustica, Salsiccia, Vegetariana
+
+<span class="info">📝 Pizza names in Pizze Speciali:</span>
+Boscaiola, Carciofi, Chèvre, Fagotto allo Speck, Gustosa, Imperiale, Meraviglia, 
+Messicana, Parmigiana, Patanegra, Petite, Piadella, Piemontese, Pizza al Metro, 
+Pizza Regina, Quattro Stagioni, Schiacciata Campagnola, Schiacciata Catanese, 
+Schiacciata Sacra, Tonno, Torinese, Trevigiana
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Test Website Display</h3>
+            <button class="button" onclick="openWebsiteForTesting()">Open Website for Testing</button>
+            <div id="website-test" class="result">Click the button above to open the website and test pizza display...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ What Should Happen</h3>
+            <div class="result">
+<span class="success">🎯 Expected Behavior:</span>
+
+1. <span class="info">🍕 Initial Display:</span>
+   - Pizze Classiche: Shows first 4 pizzas + "Show More" button
+   - Pizze Speciali: Shows first 4 pizzas + "Show More" button
+   - Bevande: Shows all 6 drinks (no "Show More" needed)
+
+2. <span class="info">🔄 After Clicking "Show More":</span>
+   - Pizze Classiche: Shows all 19 pizzas + "Show Less" button
+   - Pizze Speciali: Shows all 22 pizzas + "Show Less" button
+
+3. <span class="info">🔄 After Clicking "Show Less":</span>
+   - Returns to showing only first 4 pizzas + "Show More" button
+
+4. <span class="info">🛒 Cart Functionality:</span>
+   - All "Add to Cart" buttons should work
+   - Console should show debug messages when clicked
+   - Toast notifications should appear
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Manual Testing Steps</h3>
+            <div class="result">
+<span class="warning">📋 Follow these steps to test:</span>
+
+1. <span class="info">Open the website</span> (click button above)
+
+2. <span class="info">Scroll to "Le Nostre Pizze" section</span>
+
+3. <span class="info">Check Pizze Classiche section:</span>
+   - Should see 4 pizza cards initially
+   - Should see "Vedi tutti i prodotti Pizze Classiche +15" button
+   - Click the button to see all 19 pizzas
+   - Button should change to "Mostra meno Pizze Classiche -15"
+
+4. <span class="info">Check Pizze Speciali section:</span>
+   - Should see 4 pizza cards initially  
+   - Should see "Vedi tutti i prodotti Pizze Speciali +18" button
+   - Click the button to see all 22 pizzas
+   - Button should change to "Mostra meno Pizze Speciali -18"
+
+5. <span class="info">Test Add to Cart buttons:</span>
+   - Click any pizza's cart button
+   - Should see success toast notification
+   - Cart icon in header should update count
+   - Console should show debug messages
+
+6. <span class="info">Test Cart functionality:</span>
+   - Click cart icon in header
+   - Should open cart sidebar
+   - Test quantity +/- buttons
+   - Test remove item buttons
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Troubleshooting</h3>
+            <div id="troubleshooting" class="result">
+<span class="error">❌ If pizzas are not showing:</span>
+- Check browser console for JavaScript errors
+- Verify website is running on http://localhost:3002
+- Check if products are loading from database
+
+<span class="error">❌ If "Show More" button doesn't work:</span>
+- Check console for click event logs
+- Verify button has proper event handlers
+- Check if state management is working
+
+<span class="error">❌ If cart buttons don't work:</span>
+- Check console for cart-related errors
+- Verify cart context is properly set up
+- Check if product data is complete
+
+<span class="success">✅ Signs everything is working:</span>
+- All pizzas display when "Show More" is clicked
+- Cart buttons show success notifications
+- Console shows debug messages for all actions
+- No JavaScript errors in console
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openWebsiteForTesting() {
+            const resultDiv = document.getElementById('website-test');
+            resultDiv.innerHTML = '<span class="info">🌐 Opening website for testing...</span>';
+            
+            // Open website in new tab
+            const testWindow = window.open('http://localhost:3002', '_blank');
+            
+            if (testWindow) {
+                resultDiv.innerHTML = `
+<span class="success">✅ Website opened in new tab</span>
+
+<span class="info">🎯 Now test the following:</span>
+1. Scroll to "Le Nostre Pizze" section
+2. Count the pizza cards in each category
+3. Click "Show More" buttons to see all pizzas
+4. Test "Add to Cart" buttons
+5. Check browser console for debug messages
+
+<span class="warning">💡 Expected Results:</span>
+- Pizze Classiche: 4 → 19 pizzas when expanded
+- Pizze Speciali: 4 → 22 pizzas when expanded
+- All cart buttons should work with notifications
+
+<span class="info">🔍 Check console logs for:</span>
+- "🔄 Toggling category expansion for: [category]"
+- "🛒 Add to cart button clicked"
+- "✅ Product added to cart successfully"
+                `;
+            } else {
+                resultDiv.innerHTML = `
+<span class="error">❌ Could not open website</span>
+<span class="warning">💡 Please manually navigate to: http://localhost:3002</span>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
