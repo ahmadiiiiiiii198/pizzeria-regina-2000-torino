@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix User Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .solution {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix User Registration</h1>
+        <p>This tool will diagnose and fix the "Database error saving new user" issue.</p>
+        
+        <div id="status" class="status info">
+            Ready to diagnose user registration issues...
+        </div>
+
+        <button onclick="diagnoseIssue()" id="diagnoseBtn">🔍 Diagnose Issue</button>
+        <button onclick="testRegistration()" id="testBtn">🧪 Test Registration</button>
+        <button onclick="showManualFix()" id="manualBtn">📋 Show Manual Fix</button>
+
+        <div id="manualFix" class="solution" style="display: none;">
+            <h3>🛠️ Manual Fix Instructions</h3>
+            <p><strong>The issue is likely that the database trigger for creating user profiles is missing.</strong></p>
+            
+            <h4>Option 1: Fix via Supabase Dashboard (Recommended)</h4>
+            <ol>
+                <li>Go to your <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a></li>
+                <li>Navigate to <strong>Database → Functions</strong></li>
+                <li>Click <strong>"Create a new function"</strong></li>
+                <li>Name: <code>create_user_profile</code></li>
+                <li>Copy and paste this code:</li>
+            </ol>
+            
+            <textarea readonly style="width: 100%; height: 200px; font-family: monospace; font-size: 12px;">
+CREATE OR REPLACE FUNCTION create_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO user_profiles (id, email, full_name, phone, default_address)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE(NEW.raw_user_meta_data->>'default_address', '')
+  );
+  RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Don't fail user creation if profile creation fails
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+            </textarea>
+            
+            <ol start="6">
+                <li>Click <strong>"Create function"</strong></li>
+                <li>Go to <strong>Database → Triggers</strong></li>
+                <li>Click <strong>"Create a new trigger"</strong></li>
+                <li>Configure:
+                    <ul>
+                        <li>Name: <code>create_user_profile_trigger</code></li>
+                        <li>Table: <code>auth.users</code></li>
+                        <li>Events: <code>INSERT</code></li>
+                        <li>Type: <code>AFTER</code></li>
+                        <li>Function: <code>create_user_profile</code></li>
+                    </ul>
+                </li>
+                <li>Click <strong>"Create trigger"</strong></li>
+            </ol>
+
+            <h4>Option 2: Alternative Approach</h4>
+            <p>If the above doesn't work, you can modify the registration code to manually create profiles:</p>
+            <ol>
+                <li>The registration will create the auth user</li>
+                <li>Then manually insert into user_profiles table</li>
+                <li>This requires code changes in the frontend</li>
+            </ol>
+        </div>
+
+        <h3>📋 Diagnostic Log:</h3>
+        <div id="log" class="log">Waiting for diagnostic...\n</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = "https://sixnfemtvmighstbgrbd.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I";
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function diagnoseIssue() {
+            const btn = document.getElementById('diagnoseBtn');
+            btn.disabled = true;
+            
+            try {
+                log('🔍 Starting user registration diagnosis...');
+                setStatus('Diagnosing user registration issues...', 'info');
+
+                // 1. Test database connection
+                log('1. Testing database connection...');
+                const { data: connTest, error: connError } = await supabaseClient
+                    .from('settings')
+                    .select('count')
+                    .limit(1);
+
+                if (connError) {
+                    log(`❌ Database connection failed: ${connError.message}`);
+                    setStatus('Database connection failed', 'error');
+                    return;
+                }
+                log('✅ Database connection successful');
+
+                // 2. Check user_profiles table
+                log('2. Checking user_profiles table...');
+                const { data: profileTest, error: profileError } = await supabaseClient
+                    .from('user_profiles')
+                    .select('id')
+                    .limit(1);
+
+                if (profileError) {
+                    if (profileError.message?.includes('relation "user_profiles" does not exist')) {
+                        log('❌ CRITICAL: user_profiles table missing!');
+                        setStatus('user_profiles table missing - this is the main issue', 'error');
+                        return;
+                    } else {
+                        log(`⚠️ user_profiles table issue: ${profileError.message}`);
+                    }
+                } else {
+                    log('✅ user_profiles table exists and accessible');
+                }
+
+                // 3. Test RLS policies
+                log('3. Testing RLS policies...');
+                const { data: rlsTest, error: rlsError } = await supabaseClient
+                    .from('user_profiles')
+                    .insert({
+                        id: '00000000-0000-0000-0000-000000000000',
+                        email: 'test@test.com',
+                        full_name: 'Test'
+                    });
+
+                if (rlsError) {
+                    if (rlsError.message?.includes('row-level security policy')) {
+                        log('✅ RLS policies are active (this is correct)');
+                    } else {
+                        log(`⚠️ RLS test result: ${rlsError.message}`);
+                    }
+                } else {
+                    log('⚠️ RLS may not be properly configured');
+                }
+
+                log('\n🎯 DIAGNOSIS COMPLETE');
+                log('=====================================');
+                log('Most likely cause: Missing database trigger for user profile creation');
+                log('Solution: Create the trigger function and trigger (see manual fix)');
+                
+                setStatus('Diagnosis complete - check log for details', 'warning');
+
+            } catch (error) {
+                log(`❌ Diagnosis failed: ${error.message}`);
+                setStatus(`Diagnosis error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function testRegistration() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            
+            try {
+                log('🧪 Testing user registration...');
+                setStatus('Testing registration...', 'info');
+
+                const testEmail = `test-${Date.now()}@example.com`;
+                const testPassword = 'testpassword123';
+
+                log(`📧 Testing with: ${testEmail}`);
+
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: testEmail,
+                    password: testPassword,
+                    options: {
+                        data: {
+                            full_name: 'Test User',
+                            phone: '+39 123 456 7890',
+                            default_address: 'Test Address'
+                        }
+                    }
+                });
+
+                if (error) {
+                    log(`❌ Registration failed: ${error.message}`);
+                    if (error.message.includes('Database error saving new user')) {
+                        log('🎯 CONFIRMED: This is the trigger issue!');
+                        setStatus('Registration failed - trigger issue confirmed', 'error');
+                    } else {
+                        setStatus(`Registration failed: ${error.message}`, 'error');
+                    }
+                } else {
+                    log('✅ Registration test successful!');
+                    log(`User created: ${data.user?.email}`);
+                    setStatus('Registration test passed!', 'success');
+                }
+
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`);
+                setStatus(`Test error: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showManualFix() {
+            const fixDiv = document.getElementById('manualFix');
+            fixDiv.style.display = fixDiv.style.display === 'none' ? 'block' : 'none';
+            
+            if (fixDiv.style.display === 'block') {
+                log('📋 Manual fix instructions displayed');
+                setStatus('Manual fix instructions shown below', 'info');
+            }
+        }
+
+        // Auto-start diagnosis
+        window.addEventListener('load', () => {
+            log('🚀 User registration fix tool loaded');
+            log('💡 Click "Diagnose Issue" to start');
+        });
+    </script>
+</body>
+</html>

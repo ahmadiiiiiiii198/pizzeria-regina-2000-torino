@@ -223,6 +223,8 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       setLoading(true);
 
+      console.log('🔐 [SIGNUP] Starting user registration...');
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -236,8 +238,20 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
 
       if (error) {
+        console.error('🔐 [SIGNUP] Auth signup failed:', error.message);
+
+        // Provide helpful error message for the database trigger issue
+        if (error.message.includes('Database error saving new user')) {
+          return {
+            success: false,
+            error: 'Errore del database durante la registrazione. Contatta l\'amministratore per risolvere il problema del trigger del database.'
+          };
+        }
+
         return { success: false, error: error.message };
       }
+
+      console.log('🔐 [SIGNUP] Auth user created successfully:', data.user?.id);
 
       if (data.user && !data.session) {
         // Email confirmation required
@@ -247,8 +261,10 @@ export const CustomerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         });
       }
 
+      console.log('🔐 [SIGNUP] Registration completed successfully');
       return { success: true };
     } catch (error) {
+      console.error('🔐 [SIGNUP] Registration exception:', error);
       return { success: false, error: 'Errore durante la registrazione' };
     } finally {
       setLoading(false);

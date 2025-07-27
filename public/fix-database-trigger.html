@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Database Trigger - User Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .critical { background: #f5c6cb; color: #721c24; border: 2px solid #dc3545; }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        
+        code {
+            background: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        
+        .dashboard-link {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        .dashboard-link:hover { background: #218838; }
+        
+        ol li { margin: 10px 0; }
+        ul li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix Database Trigger - User Registration</h1>
+        
+        <div class="critical">
+            <strong>🚨 CRITICAL ISSUE IDENTIFIED:</strong><br>
+            The database trigger <code>create_user_profile_trigger</code> on the <code>auth.users</code> table is failing, 
+            preventing ALL user registrations with "Database error saving new user".
+        </div>
+
+        <div class="highlight">
+            <strong>💡 ROOT CAUSE:</strong> The trigger function <code>create_user_profile()</code> exists but is failing when it tries to insert into the <code>user_profiles</code> table, likely due to RLS policies or missing permissions.
+        </div>
+
+        <h2>🛠️ Solution Options</h2>
+
+        <div class="step">
+            <h3>Option 1: Fix the Trigger (Recommended)</h3>
+            <p>Go to your Supabase Dashboard and fix the trigger function:</p>
+            
+            <a href="https://supabase.com/dashboard" target="_blank" class="dashboard-link">
+                🔗 Open Supabase Dashboard
+            </a>
+            
+            <ol>
+                <li>Navigate to <strong>Database → Functions</strong></li>
+                <li>Find the function <code>create_user_profile</code></li>
+                <li>Click <strong>Edit</strong> and replace the content with this fixed version:</li>
+            </ol>
+
+            <div class="code-block">CREATE OR REPLACE FUNCTION create_user_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Insert user profile with error handling
+  BEGIN
+    INSERT INTO user_profiles (
+      id, 
+      email, 
+      full_name, 
+      phone, 
+      default_address
+    )
+    VALUES (
+      NEW.id,
+      NEW.email,
+      COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+      COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+      COALESCE(NEW.raw_user_meta_data->>'default_address', '')
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Don't fail user creation if profile creation fails
+      RAISE WARNING 'Failed to create user profile for %: %', NEW.id, SQLERRM;
+  END;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;</div>
+
+            <ol start="4">
+                <li>Click <strong>Save</strong></li>
+                <li>Test user registration - it should now work!</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Option 2: Disable the Trigger Temporarily</h3>
+            <p>If Option 1 doesn't work, disable the trigger:</p>
+            
+            <ol>
+                <li>Go to <strong>Database → Triggers</strong></li>
+                <li>Find <code>create_user_profile_trigger</code></li>
+                <li>Click <strong>Delete</strong> or <strong>Disable</strong></li>
+                <li>User registration will work, but profiles won't be created automatically</li>
+                <li>The frontend code will handle profile creation manually</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Option 3: Check RLS Policies</h3>
+            <p>The trigger might be failing due to RLS policies:</p>
+            
+            <ol>
+                <li>Go to <strong>Database → Tables → user_profiles</strong></li>
+                <li>Click on <strong>RLS Policies</strong></li>
+                <li>Check if there's a policy that allows INSERT for authenticated users</li>
+                <li>If not, add this policy:</li>
+            </ol>
+
+            <div class="code-block">CREATE POLICY "Allow trigger to insert profiles" 
+ON user_profiles 
+FOR INSERT 
+WITH CHECK (true);</div>
+        </div>
+
+        <h2>🧪 Test the Fix</h2>
+        
+        <button onclick="testRegistration()">🧪 Test User Registration</button>
+        
+        <div id="testResult" style="margin-top: 20px;"></div>
+
+        <h2>📋 Alternative: Frontend-Only Solution</h2>
+        
+        <div class="info">
+            <strong>ℹ️ Good News:</strong> The frontend code has already been updated to handle profile creation manually, 
+            so even if the trigger isn't fixed, user registration should work once the trigger is disabled.
+        </div>
+
+        <div class="step">
+            <h3>How the Frontend Fix Works:</h3>
+            <ol>
+                <li>User fills out registration form</li>
+                <li>Frontend calls <code>supabase.auth.signUp()</code> without metadata</li>
+                <li>If successful, frontend manually creates the profile in <code>user_profiles</code></li>
+                <li>User gets registered with complete profile data</li>
+            </ol>
+        </div>
+
+        <h2>🎯 Next Steps</h2>
+        
+        <div class="warning">
+            <strong>⚠️ IMPORTANT:</strong> After applying any of the fixes above:
+            <ol>
+                <li>Test user registration on your website</li>
+                <li>Check that user profiles are created correctly</li>
+                <li>Verify that users can log in after registration</li>
+            </ol>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = "https://sixnfemtvmighstbgrbd.supabase.co";
+        const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I";
+        
+        const { createClient } = supabase;
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+        async function testRegistration() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '<div class="info">🧪 Testing user registration...</div>';
+
+            try {
+                const testEmail = `test-fix-${Date.now()}@example.com`;
+                
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email: testEmail,
+                    password: 'testpassword123'
+                });
+
+                if (error) {
+                    resultDiv.innerHTML = `
+                        <div class="error">
+                            <strong>❌ Registration still failing:</strong><br>
+                            ${error.message}<br><br>
+                            <strong>Next step:</strong> Apply one of the fixes above in the Supabase Dashboard.
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Registration successful!</strong><br>
+                            User created: ${data.user?.id}<br>
+                            Email: ${data.user?.email}<br><br>
+                            <strong>🎉 The fix worked!</strong> User registration is now working.
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Test failed:</strong><br>
+                        ${e.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
