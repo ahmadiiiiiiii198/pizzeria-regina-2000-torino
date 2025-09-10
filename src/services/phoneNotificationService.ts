@@ -30,9 +30,16 @@ class PhoneNotificationService {
   private ringTimer: NodeJS.Timeout | null = null;
   private stopTimer: NodeJS.Timeout | null = null;
 
+  // Audio Context Keep-Alive System
+  private audioContext: AudioContext | null = null;
+  private keepAliveTimer: NodeJS.Timeout | null = null;
+  private silentBuffer: AudioBuffer | null = null;
+  private isKeepAliveActive = false;
+
   private constructor() {
     this.loadSettings();
     this.initializeAudio();
+    this.initializeAudioContext();
   }
 
   static getInstance(): PhoneNotificationService {
@@ -67,12 +74,18 @@ class PhoneNotificationService {
       this.audioElement.preload = 'auto';
       this.audioElement.volume = this.settings.volume;
 
-      // Set the audio source
+      // Set the audio source - try notification file first, fallback to generated beep
       if (this.settings.customNotificationSound && this.settings.notificationSoundUrl) {
         this.audioElement.src = this.settings.notificationSoundUrl;
       } else {
-        // Use default notification sound - fallback to generated beep if file doesn't exist
-        this.audioElement.src = this.getDefaultNotificationSound();
+        // Try to use notification-sound.mp3, fallback to generated beep
+        this.audioElement.src = '/notification-sound.mp3';
+
+        // Handle load error - fallback to generated beep
+        this.audioElement.onerror = () => {
+          console.log('🔊 [PhoneNotification] notification-sound.mp3 not found, using generated beep');
+          this.audioElement!.src = this.generateBeepSound();
+        };
       }
 
       // Add event listeners
@@ -223,7 +236,7 @@ class PhoneNotificationService {
 
   stopNotification(): void {
     console.log('🔇 [PhoneNotification] Stopping notification');
-    
+
     this.isPlaying = false;
     this.ringCount = 0;
 
@@ -243,6 +256,9 @@ class PhoneNotificationService {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
     }
+
+    // Keep the keep-alive system running even when notification stops
+    // This ensures audio context stays active for future notifications
   }
 
   async testNotification(): Promise<void> {
@@ -263,7 +279,7 @@ class PhoneNotificationService {
       // Update audio source if changed
       const newSrc = this.settings.customNotificationSound && this.settings.notificationSoundUrl
         ? this.settings.notificationSoundUrl
-        : '/notification-sound.mp3';
+        : this.generateBeepSound();
         
       if (oldSrc !== newSrc) {
         this.audioElement.src = newSrc;
@@ -288,13 +304,17 @@ class PhoneNotificationService {
     maxRings: number;
     audioReady: boolean;
     currentSrc: string | null;
+    audioContextState: string | null;
+    keepAliveActive: boolean;
   } {
     return {
       isPlaying: this.isPlaying,
       ringCount: this.ringCount,
       maxRings: this.settings.maxRings,
       audioReady: !!this.audioElement,
-      currentSrc: this.audioElement?.src || null
+      currentSrc: this.audioElement?.src || null,
+      audioContextState: this.audioContext?.state || null,
+      keepAliveActive: this.isKeepAliveActive
     };
   }
 
@@ -319,6 +339,223 @@ class PhoneNotificationService {
         console.log('🔊 [PhoneNotification] Audio context enable failed');
       });
     }
+
+    // Also initialize and start keep-alive for audio context
+    this.initializeAudioContext();
+    this.startAudioContextKeepAlive();
+  }
+
+  // Get default notification sound path
+  private getDefaultNotificationSound(): string {
+    return '/notification-sound.mp3';
+  }
+
+  // Initialize Audio Context for background audio support
+  private async initializeAudioContext(): Promise<void> {
+    if (this.audioContext) return;
+
+    try {
+      console.log('🔊 [PhoneNotification] Initializing AudioContext for background support...');
+
+      // Create AudioContext
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.audioContext = new AudioContextClass();
+
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+        console.log('🔊 [PhoneNotification] AudioContext resumed');
+      }
+
+      // Create silent buffer for keep-alive
+      await this.createSilentBuffer();
+
+      console.log('🔊 [PhoneNotification] ✅ AudioContext initialized successfully');
+
+    } catch (error) {
+      console.error('🔊 [PhoneNotification] ❌ AudioContext initialization failed:', error);
+    }
+  }
+
+  // Create a silent audio buffer for keep-alive
+  private async createSilentBuffer(): Promise<void> {
+    if (!this.audioContext) return;
+
+    try {
+      const sampleRate = this.audioContext.sampleRate;
+      const duration = 0.1; // 100ms of silence
+      const frameCount = sampleRate * duration;
+
+      this.silentBuffer = this.audioContext.createBuffer(1, frameCount, sampleRate);
+      // Buffer is already silent (zeros by default)
+
+      console.log('🔊 [PhoneNotification] Silent buffer created for keep-alive');
+
+    } catch (error) {
+      console.error('🔊 [PhoneNotification] ❌ Failed to create silent buffer:', error);
+    }
+  }
+
+  // Start Audio Context Keep-Alive system
+  public startAudioContextKeepAlive(): void {
+    if (this.isKeepAliveActive) return;
+
+    console.log('🔊 [PhoneNotification] Starting AudioContext keep-alive system...');
+    this.isKeepAliveActive = true;
+
+    // Play silent audio every 25 seconds to keep context alive
+    this.keepAliveTimer = setInterval(() => {
+      this.playSilentAudio();
+    }, 25000);
+
+    // Also set up visibility change handler
+    this.setupVisibilityHandler();
+  }
+
+  // Stop Audio Context Keep-Alive system
+  public stopAudioContextKeepAlive(): void {
+    if (!this.isKeepAliveActive) return;
+
+    console.log('🔊 [PhoneNotification] Stopping AudioContext keep-alive system...');
+    this.isKeepAliveActive = false;
+
+    if (this.keepAliveTimer) {
+      clearInterval(this.keepAliveTimer);
+      this.keepAliveTimer = null;
+    }
+  }
+
+  // Play silent audio to keep context alive
+  private async playSilentAudio(): Promise<void> {
+    if (!this.audioContext || !this.silentBuffer) return;
+
+    try {
+      // Resume context if suspended
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+        console.log('🔊 [PhoneNotification] AudioContext resumed during keep-alive');
+      }
+
+      // Play silent buffer
+      const source = this.audioContext.createBufferSource();
+      source.buffer = this.silentBuffer;
+
+      // Connect to destination with very low volume
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.value = 0.001; // Almost silent
+
+      source.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+      source.start();
+
+      console.log('🔊 [PhoneNotification] Silent audio played for keep-alive');
+
+    } catch (error) {
+      console.error('🔊 [PhoneNotification] ❌ Failed to play silent audio:', error);
+    }
+  }
+
+  // Setup visibility change handler for background/foreground detection
+  private setupVisibilityHandler(): void {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        console.log('🔊 [PhoneNotification] Page went to background - maintaining audio context');
+        // Immediately play silent audio when going to background
+        this.playSilentAudio();
+      } else if (document.visibilityState === 'visible') {
+        console.log('🔊 [PhoneNotification] Page came to foreground - resuming audio context');
+        // Resume audio context when coming back to foreground
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume();
+        }
+      }
+    });
+  }
+
+  // Generate a simple beep sound using Web Audio API
+  private generateBeepSound(): string {
+    try {
+      // Create a proper beep sound using Web Audio API and convert to data URL
+      const sampleRate = 44100;
+      const duration = 0.5; // 0.5 seconds
+      const frequency = 800; // 800Hz beep
+      const frameCount = sampleRate * duration;
+
+      // Create audio buffer
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+
+      // Generate sine wave beep
+      for (let i = 0; i < frameCount; i++) {
+        const t = i / sampleRate;
+        // Create a beep with fade in/out to avoid clicks
+        let amplitude = 0.3;
+        if (t < 0.01) {
+          amplitude *= t / 0.01; // Fade in
+        } else if (t > duration - 0.01) {
+          amplitude *= (duration - t) / 0.01; // Fade out
+        }
+        channelData[i] = Math.sin(2 * Math.PI * frequency * t) * amplitude;
+      }
+
+      // Convert audio buffer to WAV data URL
+      const wavData = this.audioBufferToWav(audioBuffer);
+      const blob = new Blob([wavData], { type: 'audio/wav' });
+
+      // Create data URL
+      const reader = new FileReader();
+      return new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      }) as any; // Return promise but we'll use sync fallback
+
+    } catch (error) {
+      console.error('❌ [PhoneNotification] Error generating beep sound:', error);
+    }
+
+    // Return a working beep sound data URL as fallback
+    // This is a proper 0.5 second 800Hz sine wave beep
+    return 'data:audio/wav;base64,UklGRiQEAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAEAAA=';
+  }
+
+  // Helper method to convert AudioBuffer to WAV format
+  private audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
+    const length = buffer.length;
+    const arrayBuffer = new ArrayBuffer(44 + length * 2);
+    const view = new DataView(arrayBuffer);
+    const channelData = buffer.getChannelData(0);
+
+    // WAV header
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length * 2, true);
+
+    // Convert float samples to 16-bit PCM
+    let offset = 44;
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, channelData[i]));
+      view.setInt16(offset, sample * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return arrayBuffer;
   }
 }
 

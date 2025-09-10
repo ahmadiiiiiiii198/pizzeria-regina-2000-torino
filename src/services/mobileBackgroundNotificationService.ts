@@ -136,6 +136,9 @@ class MobileBackgroundNotificationService {
 
     // Enable audio with user gesture (required for mobile)
     phoneNotificationService.enableAudioWithUserGesture();
+
+    // Start audio context keep-alive for background support
+    phoneNotificationService.startAudioContextKeepAlive();
   }
 
   private async initializePushNotifications(): Promise<void> {

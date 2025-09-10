@@ -191,8 +191,29 @@ class BackgroundOrderService {
         if (!this.isRunning) {
           this.start();
         }
+        // Resume audio context when page becomes visible
+        this.resumeAudioContextFromBackground();
       } else {
         console.log('👁️ [BackgroundOrder] Page hidden - maintaining background monitoring');
+        // Maintain audio context for background notifications
+        this.maintainAudioContextForBackground();
+      }
+    });
+
+    // Listen for messages from service worker
+    navigator.serviceWorker?.addEventListener('message', (event) => {
+      if (event.data.type === 'NOTIFICATION_CLICKED' && event.data.triggerAudio) {
+        console.log('🔔 [BackgroundOrder] Notification clicked - triggering audio');
+        // Import and trigger phone notification
+        import('@/services/phoneNotificationService').then(({ phoneNotificationService }) => {
+          phoneNotificationService.enableAudioWithUserGesture();
+          if (event.data.data?.orderNumber) {
+            phoneNotificationService.notifyNewOrder(
+              event.data.data.orderNumber,
+              event.data.data.customerName || 'Customer'
+            );
+          }
+        });
       }
     });
   }
@@ -312,6 +333,30 @@ class BackgroundOrderService {
 
   isServiceRunning(): boolean {
     return this.isRunning;
+  }
+
+  // Maintain audio context for background notifications
+  private async maintainAudioContextForBackground(): Promise<void> {
+    try {
+      const { phoneNotificationService } = await import('@/services/phoneNotificationService');
+      // Ensure audio context keep-alive is running
+      phoneNotificationService.startAudioContextKeepAlive();
+      console.log('🔊 [BackgroundOrder] Audio context keep-alive maintained for background');
+    } catch (error) {
+      console.error('❌ [BackgroundOrder] Failed to maintain audio context:', error);
+    }
+  }
+
+  // Resume audio context from background
+  private async resumeAudioContextFromBackground(): Promise<void> {
+    try {
+      const { phoneNotificationService } = await import('@/services/phoneNotificationService');
+      // Re-enable audio with user gesture if needed
+      phoneNotificationService.enableAudioWithUserGesture();
+      console.log('🔊 [BackgroundOrder] Audio context resumed from background');
+    } catch (error) {
+      console.error('❌ [BackgroundOrder] Failed to resume audio context:', error);
+    }
   }
 
   getStatus(): {

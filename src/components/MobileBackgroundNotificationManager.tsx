@@ -107,13 +107,46 @@ export const MobileBackgroundNotificationManager: React.FC = () => {
       await mobileBackgroundNotificationService.testNotification();
       toast({
         title: "Test Notifica",
-        description: "Notifica di test inviata",
+        description: "Notifica di test inviata - controlla audio e vibrazione",
       });
     } catch (error) {
       console.error('❌ [MobileNotificationManager] Test error:', error);
       toast({
         title: "Errore Test",
         description: "Errore nell'invio della notifica di test",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Test background notification (simulates screen lock scenario)
+  const handleTestBackgroundNotification = async () => {
+    try {
+      toast({
+        title: "Test Background",
+        description: "Ora blocca lo schermo o cambia app. Riceverai una notifica tra 5 secondi.",
+      });
+
+      // Wait 5 seconds then trigger notification
+      setTimeout(async () => {
+        // Trigger a comprehensive background notification test
+        await mobileBackgroundNotificationService.testNotification();
+
+        // Also trigger phone notification service directly
+        const { phoneNotificationService } = await import('@/services/phoneNotificationService');
+        await phoneNotificationService.notifyNewOrder('TEST-BG-001', 'Test Background Customer');
+
+        // Trigger vibration
+        if ('vibrate' in navigator) {
+          navigator.vibrate([200, 100, 200, 100, 200, 100, 200]);
+        }
+      }, 5000);
+
+    } catch (error) {
+      console.error('❌ [MobileNotificationManager] Background test error:', error);
+      toast({
+        title: "Errore Test Background",
+        description: "Errore nel test delle notifiche in background",
         variant: "destructive"
       });
     }
@@ -237,12 +270,21 @@ export const MobileBackgroundNotificationManager: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-2">
-          <Button 
+          <Button
             onClick={handleTestNotification}
             variant="outline"
             size="sm"
           >
             🧪 Test Notifica
+          </Button>
+
+          <Button
+            onClick={handleTestBackgroundNotification}
+            variant="outline"
+            size="sm"
+            className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+          >
+            📱 Test Background
           </Button>
           
           {isPlaying && (
@@ -271,13 +313,29 @@ export const MobileBackgroundNotificationManager: React.FC = () => {
         {/* Mobile-specific instructions */}
         {status.isMobile && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">📱 Istruzioni per Mobile</h4>
+            <h4 className="font-medium text-blue-900 mb-2">📱 Istruzioni per Notifiche in Background</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Mantieni l'app aperta nel browser</li>
-              <li>• Non chiudere completamente il browser</li>
-              <li>• Concedi i permessi per le notifiche quando richiesto</li>
-              <li>• Su iOS: aggiungi l'app alla schermata home per migliori prestazioni</li>
-              <li>• Su Android: evita di mettere l'app in "risparmio batteria"</li>
+              <li>• <strong>Mantieni l'app aperta</strong> nel browser (non chiudere la scheda)</li>
+              <li>• <strong>Concedi i permessi</strong> per le notifiche quando richiesto</li>
+              <li>• <strong>iOS Safari:</strong> aggiungi l'app alla schermata home (Condividi → Aggiungi alla schermata Home)</li>
+              <li>• <strong>Android Chrome:</strong> installa l'app (banner "Installa app" o menu → Installa)</li>
+              <li>• <strong>Evita il risparmio batteria:</strong> escludi il browser dalle ottimizzazioni batteria</li>
+              <li>• <strong>Audio in background:</strong> le notifiche suoneranno anche con schermo spento</li>
+              <li>• <strong>Vibrazione:</strong> il dispositivo vibrerà per ogni nuovo ordine</li>
+            </ul>
+          </div>
+        )}
+
+        {/* PWA Installation Prompt */}
+        {status.isMobile && !status.hasServiceWorker && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <h4 className="font-medium text-amber-900 mb-2">⚡ Migliora le Prestazioni</h4>
+            <p className="text-sm text-amber-800 mb-2">
+              Per le migliori notifiche in background, installa l'app sul tuo dispositivo:
+            </p>
+            <ul className="text-sm text-amber-800 space-y-1">
+              <li>• <strong>iPhone/iPad:</strong> Safari → Condividi → "Aggiungi alla schermata Home"</li>
+              <li>• <strong>Android:</strong> Chrome → Menu (⋮) → "Installa app" o "Aggiungi alla schermata Home"</li>
             </ul>
           </div>
         )}

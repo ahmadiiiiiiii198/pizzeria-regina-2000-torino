@@ -96,27 +96,30 @@ self.addEventListener('push', (event) => {
   console.log('📱 Push notification received:', event);
   
   let notificationData = {
-    title: 'New Order Received!',
-    body: 'You have a new flower order',
+    title: 'Nuovo Ordine Ricevuto! 🍕',
+    body: 'Hai ricevuto un nuovo ordine',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     tag: 'new-order',
     requireInteraction: true,
+    silent: false, // Enable sound
+    vibrate: [200, 100, 200, 100, 200, 100, 200],
     actions: [
       {
         action: 'view',
-        title: 'View Order',
-        icon: '/icons/view.png'
+        title: 'Visualizza Ordine',
+        icon: '/favicon.ico'
       },
       {
         action: 'dismiss',
-        title: 'Dismiss',
-        icon: '/icons/dismiss.png'
+        title: 'Chiudi',
+        icon: '/favicon.ico'
       }
     ],
     data: {
-      url: '/orders',
-      timestamp: Date.now()
+      url: '/ordini',
+      timestamp: Date.now(),
+      sound: true
     }
   };
 
@@ -152,7 +155,18 @@ self.addEventListener('notificationclick', (event) => {
   if (event.action === 'view') {
     // Open the order dashboard
     event.waitUntil(
-      clients.openWindow('/orders')
+      clients.openWindow('/ordini').then(windowClient => {
+        // Send message to trigger audio when window opens
+        if (windowClient) {
+          setTimeout(() => {
+            windowClient.postMessage({
+              type: 'NOTIFICATION_CLICKED',
+              data: event.notification.data,
+              triggerAudio: true
+            });
+          }, 1000); // Delay to ensure page is loaded
+        }
+      })
     );
   } else if (event.action === 'dismiss') {
     // Just close the notification
@@ -163,7 +177,13 @@ self.addEventListener('notificationclick', (event) => {
       clients.matchAll({ type: 'window' }).then((clientList) => {
         // Check if app is already open
         for (const client of clientList) {
-          if (client.url.includes('/orders') && 'focus' in client) {
+          if (client.url.includes('/ordini') && 'focus' in client) {
+            // Send message to existing window to trigger audio
+            client.postMessage({
+              type: 'NOTIFICATION_CLICKED',
+              data: event.notification.data,
+              triggerAudio: true
+            });
             return client.focus();
           }
         }
@@ -283,7 +303,8 @@ async function showOrderNotification(orderData) {
     badge: '/favicon.ico',
     tag: 'new-order',
     requireInteraction: true,
-    vibrate: [200, 100, 200, 100, 200],
+    silent: false, // Enable sound for background notifications
+    vibrate: [200, 100, 200, 100, 200, 100, 200, 100, 200],
     actions: [
       {
         action: 'view',
@@ -301,7 +322,9 @@ async function showOrderNotification(orderData) {
       customerName: orderData.customer_name,
       orderId: orderData.id,
       url: '/ordini',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      sound: true,
+      priority: 'high'
     }
   };
 
