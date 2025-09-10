@@ -66,13 +66,13 @@ class PhoneNotificationService {
       this.audioElement = new Audio();
       this.audioElement.preload = 'auto';
       this.audioElement.volume = this.settings.volume;
-      
+
       // Set the audio source
       if (this.settings.customNotificationSound && this.settings.notificationSoundUrl) {
         this.audioElement.src = this.settings.notificationSoundUrl;
       } else {
-        // Use default notification sound
-        this.audioElement.src = '/notification-sound.mp3';
+        // Use default notification sound - fallback to generated beep if file doesn't exist
+        this.audioElement.src = this.getDefaultNotificationSound();
       }
 
       // Add event listeners
@@ -83,7 +83,9 @@ class PhoneNotificationService {
 
       this.audioElement.addEventListener('error', (error) => {
         console.error('❌ [PhoneNotification] Audio error:', error);
-        this.isPlaying = false;
+        // Fallback to generated beep sound
+        this.audioElement.src = this.generateBeepSound();
+        console.log('🔊 [PhoneNotification] Falling back to generated beep sound');
       });
 
       console.log('🔊 [PhoneNotification] Audio initialized');
