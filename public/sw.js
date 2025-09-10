@@ -216,26 +216,184 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Enhanced order monitoring state
+let isOrderMonitoringActive = false;
+let lastOrderId = null;
+let monitoringSettings = {
+  enabled: true,
+  checkInterval: 30000, // 30 seconds
+  useNotifications: true
+};
+
 // Periodic background sync to check for new orders
 async function syncOrders() {
   try {
-    console.log('🔄 Syncing orders in background...');
-    
-    // This would typically make an API call to check for new orders
-    // For now, we'll just log that sync happened
-    console.log('✅ Order sync completed');
-    
-    // You could implement actual API calls here:
-    // const response = await fetch('/api/orders/check-new');
-    // const newOrders = await response.json();
-    // if (newOrders.length > 0) {
-    //   // Show notifications for new orders
-    // }
-    
+    console.log('🔄 [SW] Syncing orders in background...');
+
+    if (!isOrderMonitoringActive) {
+      console.log('🔄 [SW] Order monitoring not active, skipping sync');
+      return;
+    }
+
+    // Check for new orders using Supabase
+    const response = await fetch(`${self.location.origin}/api/orders/latest`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+
+      if (data.orders && data.orders.length > 0) {
+        const latestOrder = data.orders[0];
+
+        // Check if this is a new order
+        if (lastOrderId !== latestOrder.id) {
+          lastOrderId = latestOrder.id;
+          console.log('🚨 [SW] New order detected:', latestOrder.order_number);
+
+          // Show notification
+          await showOrderNotification(latestOrder);
+
+          // Send message to main app if it's open
+          await notifyMainApp(latestOrder);
+        }
+      }
+    }
+
+    console.log('✅ [SW] Order sync completed');
+
   } catch (error) {
-    console.error('❌ Order sync failed:', error);
+    console.error('❌ [SW] Order sync failed:', error);
   }
 }
+
+// Show notification for new order
+async function showOrderNotification(orderData) {
+  if (!monitoringSettings.useNotifications) {
+    return;
+  }
+
+  const notificationOptions = {
+    title: 'Nuovo Ordine Ricevuto! 🍕',
+    body: `Ordine #${orderData.order_number} da ${orderData.customer_name}`,
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    tag: 'new-order',
+    requireInteraction: true,
+    vibrate: [200, 100, 200, 100, 200],
+    actions: [
+      {
+        action: 'view',
+        title: 'Visualizza Ordine',
+        icon: '/favicon.ico'
+      },
+      {
+        action: 'dismiss',
+        title: 'Chiudi',
+        icon: '/favicon.ico'
+      }
+    ],
+    data: {
+      orderNumber: orderData.order_number,
+      customerName: orderData.customer_name,
+      orderId: orderData.id,
+      url: '/ordini',
+      timestamp: Date.now()
+    }
+  };
+
+  try {
+    await self.registration.showNotification(notificationOptions.title, notificationOptions);
+    console.log('✅ [SW] Notification shown for order:', orderData.order_number);
+  } catch (error) {
+    console.error('❌ [SW] Error showing notification:', error);
+  }
+}
+
+// Send message to main app
+async function notifyMainApp(orderData) {
+  try {
+    const clients = await self.clients.matchAll({
+      includeUncontrolled: true,
+      type: 'window'
+    });
+
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'NEW_ORDER_NOTIFICATION',
+        orderNumber: orderData.order_number,
+        customerName: orderData.customer_name,
+        orderId: orderData.id,
+        timestamp: Date.now()
+      });
+    });
+
+    console.log('📨 [SW] Notified main app about new order');
+  } catch (error) {
+    console.error('❌ [SW] Error notifying main app:', error);
+  }
+}
+
+// Handle messages from main app
+self.addEventListener('message', (event) => {
+  console.log('📨 [SW] Received message:', event.data);
+
+  switch (event.data.type) {
+    case 'START_ORDER_MONITORING':
+      console.log('🚀 [SW] Starting order monitoring');
+      isOrderMonitoringActive = true;
+      if (event.data.settings) {
+        monitoringSettings = { ...monitoringSettings, ...event.data.settings };
+      }
+      // Start immediate sync
+      syncOrders();
+      break;
+
+    case 'STOP_ORDER_MONITORING':
+      console.log('🛑 [SW] Stopping order monitoring');
+      isOrderMonitoringActive = false;
+      break;
+
+    case 'TEST_NOTIFICATION':
+      console.log('🧪 [SW] Testing notification');
+      showOrderNotification({
+        order_number: event.data.orderNumber || 'TEST-001',
+        customer_name: event.data.customerName || 'Test Customer',
+        id: 'test-id'
+      });
+      break;
+
+    case 'UPDATE_SETTINGS':
+      console.log('⚙️ [SW] Updating settings');
+      monitoringSettings = { ...monitoringSettings, ...event.data.settings };
+      break;
+  }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  console.log('🔔 [SW] Notification clicked:', event.notification.tag);
+
+  event.notification.close();
+
+  if (event.action === 'view') {
+    // Open the orders page
+    event.waitUntil(
+      clients.openWindow('/ordini')
+    );
+  } else if (event.action === 'dismiss') {
+    // Just close the notification
+    console.log('🔔 [SW] Notification dismissed');
+  } else {
+    // Default action - open the app
+    event.waitUntil(
+      clients.openWindow('/')
+    );
+  }
+});
 
 // Keep the service worker alive
 self.addEventListener('periodicsync', (event) => {
@@ -244,22 +402,30 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// Handle app visibility changes
-self.addEventListener('visibilitychange', (event) => {
-  console.log('👁️ App visibility changed:', document.hidden);
-  
-  if (document.hidden) {
-    // App went to background - ensure notifications continue
-    console.log('📱 App backgrounded - maintaining notification service');
-  } else {
-    // App came to foreground
-    console.log('📱 App foregrounded - syncing data');
+// Enhanced background sync with automatic order checking
+setInterval(() => {
+  if (isOrderMonitoringActive) {
+    console.log('⏰ [SW] Automatic order check');
+    syncOrders();
   }
-});
+}, monitoringSettings.checkInterval);
 
 // Error handling
 self.addEventListener('error', (event) => {
-  console.error('❌ Service Worker error:', event.error);
+  console.error('❌ [SW] Service Worker error:', event.error);
+});
+
+// Handle service worker updates
+self.addEventListener('install', (event) => {
+  console.log('📦 [SW] Service Worker installing...');
+  // Skip waiting to activate immediately
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('🔄 [SW] Service Worker activating...');
+  // Take control of all clients immediately
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('unhandledrejection', (event) => {

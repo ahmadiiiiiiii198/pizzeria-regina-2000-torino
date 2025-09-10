@@ -3,6 +3,7 @@ import { Pizza, Loader2, ArrowLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrdersAdmin from '@/components/admin/OrdersAdmin';
 import OrderNotificationSystem from '@/components/OrderNotificationSystem';
+import { MobileBackgroundNotificationManager } from '@/components/MobileBackgroundNotificationManager';
 import OrdiniHeader from '@/components/OrdiniHeader';
 import AuthenticatedAdminWrapper from '@/components/admin/AuthenticatedAdminWrapper';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -117,7 +118,13 @@ const Ordini = () => {
       </div>
 
       {/* Main Content - Mobile Optimized */}
-      <div className="px-2 sm:px-4 lg:px-6 py-3 sm:py-6 lg:py-8">
+      <div className="px-2 sm:px-4 lg:px-6 py-3 sm:py-6 lg:py-8 space-y-4">
+        {/* Mobile Background Notification Manager */}
+        <div className="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 p-3 sm:p-4 lg:p-6">
+          <MobileBackgroundNotificationManager />
+        </div>
+
+        {/* Orders Admin */}
         <div className="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl border border-gray-200 p-3 sm:p-4 lg:p-6">
           <OrdersAdmin />
         </div>
