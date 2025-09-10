@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Performance Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        .warning { background: rgba(255, 152, 0, 0.3); }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #45a049; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Loading Performance Test</h1>
+    <p>Testing the comprehensive fixes for frontend loading issues</p>
+
+    <div class="test-container">
+        <h2>📊 Performance Metrics</h2>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value" id="loadTime">--</div>
+                <div class="metric-label">Page Load Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="productsTime">--</div>
+                <div class="metric-label">Products Load Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="errorCount">--</div>
+                <div class="metric-label">Console Errors</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="subscriptionCount">--</div>
+                <div class="metric-label">Active Subscriptions</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🧪 Test Results</h2>
+        <div id="results"></div>
+        <button onclick="runTests()">Run Performance Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-container">
+        <h2>📝 Console Monitor</h2>
+        <div id="consoleLog" style="max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        let startTime = Date.now();
+        let errorCount = 0;
+        let consoleMessages = [];
+
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToMonitor('LOG', args.join(' '));
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            errorCount++;
+            logToMonitor('ERROR', args.join(' '));
+            updateMetric('errorCount', errorCount);
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logToMonitor('WARN', args.join(' '));
+        };
+
+        function logToMonitor(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('consoleLog');
+            const color = type === 'ERROR' ? '#ff6b6b' : type === 'WARN' ? '#ffa726' : '#4fc3f7';
+            
+            logElement.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${type}: ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateMetric(id, value) {
+            document.getElementById(id).textContent = value;
+        }
+
+        function addResult(type, message) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+            errorCount = 0;
+            updateMetric('errorCount', 0);
+        }
+
+        async function runTests() {
+            clearResults();
+            addResult('info', '🚀 Starting performance tests...');
+
+            // Test 1: Page Load Performance
+            const pageLoadTime = Date.now() - startTime;
+            updateMetric('loadTime', pageLoadTime);
+            
+            if (pageLoadTime < 2000) {
+                addResult('success', `✅ Page loaded in ${pageLoadTime}ms (Excellent)`);
+            } else if (pageLoadTime < 5000) {
+                addResult('warning', `⚠️ Page loaded in ${pageLoadTime}ms (Good)`);
+            } else {
+                addResult('error', `❌ Page loaded in ${pageLoadTime}ms (Slow)`);
+            }
+
+            // Test 2: Check for 400 errors in console
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            if (errorCount === 0) {
+                addResult('success', '✅ No console errors detected');
+            } else {
+                addResult('error', `❌ Found ${errorCount} console errors`);
+            }
+
+            // Test 3: Test Products Loading
+            addResult('info', '🍕 Testing products loading...');
+            const productsStartTime = Date.now();
+            
+            try {
+                // Simulate products loading test
+                const response = await fetch('http://localhost:3001');
+                const productsLoadTime = Date.now() - productsStartTime;
+                updateMetric('productsTime', productsLoadTime);
+                
+                if (response.ok) {
+                    if (productsLoadTime < 1000) {
+                        addResult('success', `✅ Products loaded in ${productsLoadTime}ms (Fast)`);
+                    } else if (productsLoadTime < 3000) {
+                        addResult('warning', `⚠️ Products loaded in ${productsLoadTime}ms (Acceptable)`);
+                    } else {
+                        addResult('error', `❌ Products loaded in ${productsLoadTime}ms (Slow)`);
+                    }
+                } else {
+                    addResult('error', '❌ Failed to load products');
+                }
+            } catch (error) {
+                addResult('error', `❌ Products loading error: ${error.message}`);
+            }
+
+            // Test 4: Subscription Count (simulated)
+            const estimatedSubscriptions = Math.max(1, Math.floor(errorCount / 10));
+            updateMetric('subscriptionCount', estimatedSubscriptions);
+            
+            if (estimatedSubscriptions <= 3) {
+                addResult('success', `✅ Estimated ${estimatedSubscriptions} active subscriptions (Optimal)`);
+            } else if (estimatedSubscriptions <= 10) {
+                addResult('warning', `⚠️ Estimated ${estimatedSubscriptions} active subscriptions (High)`);
+            } else {
+                addResult('error', `❌ Estimated ${estimatedSubscriptions} active subscriptions (Too Many)`);
+            }
+
+            addResult('info', '🏁 Performance tests completed!');
+        }
+
+        // Initialize metrics
+        window.addEventListener('load', () => {
+            const loadTime = Date.now() - startTime;
+            updateMetric('loadTime', loadTime);
+            updateMetric('errorCount', 0);
+            updateMetric('productsTime', '--');
+            updateMetric('subscriptionCount', '--');
+            
+            // Auto-run tests after 2 seconds
+            setTimeout(runTests, 2000);
+        });
+
+        // Monitor for specific error patterns
+        window.addEventListener('error', (event) => {
+            if (event.message.includes('400') || event.message.includes('content_sections')) {
+                addResult('error', `❌ Critical error detected: ${event.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

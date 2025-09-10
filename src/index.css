@@ -1,0 +1,1293 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Spectral:wght@300;400;500;600&family=Fredoka+One:wght@400&family=Roboto:wght@300;400;500;700&family=Pacifico:wght@400&family=Montserrat:wght@300;400;500;600;700;800&family=Dancing+Script:wght@400;500;600;700&family=Crimson+Text:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Flegrea-inspired CSS Variables */
+:root {
+  --flegrea-burgundy: #8B1538;
+  --flegrea-deep-red: #A91B47;
+  --flegrea-cream: #F5F0E8;
+  --flegrea-warm-white: #F5F0E8;
+  --flegrea-dark-navy: #1A1B2E;
+  --flegrea-gold-accent: #D4AF37;
+  --flegrea-soft-gray: #6B7280;
+  --flegrea-light-gray: #F5F0E8;
+
+  /* Legacy pizza variables for backward compatibility */
+  --pizza-red: #8B1538;
+  --pizza-orange: #D4AF37;
+  --pizza-yellow: #F5F0E8;
+  --pizza-green: #2e7d32;
+  --pizza-cream: #F5F0E8;
+  --pizza-brown: #8d6e63;
+  --pizza-dark: #1A1B2E;
+}
+
+/* Order Tracker Widget Styles */
+.order-tracker-widget {
+  position: fixed !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  z-index: 9999 !important;
+  width: 320px !important;
+  max-width: 90vw !important;
+  pointer-events: auto !important;
+}
+
+/* Flegrea-themed animations */
+@keyframes pizzaSpin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes flegreaGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--flegrea-burgundy);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--flegrea-burgundy), 0 0 30px var(--flegrea-deep-red);
+  }
+}
+
+@keyframes flegreaFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cheeseStretch {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.2);
+  }
+}
+
+@keyframes tomatoBounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Beautiful animations for the order dashboard */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-pizza-spin {
+  animation: pizzaSpin 3s ease-in-out infinite;
+}
+
+.animate-cheese-stretch {
+  animation: cheeseStretch 2s ease-in-out infinite;
+}
+
+.animate-tomato-bounce {
+  animation: tomatoBounce 1.5s ease-in-out infinite;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Enhanced Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+
+@keyframes petal-fall {
+  0% {
+    transform: translateY(-20px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bloom {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(251, 146, 60, 0.6);
+  }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(3deg);
+  }
+  75% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.8s ease-out forwards;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.8s ease-out forwards;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.8s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out forwards;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 1s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.animate-petal-fall {
+  animation: petal-fall 8s linear infinite;
+}
+
+.animate-bloom {
+  animation: bloom 0.6s ease-in-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+/* Modern PIZZERIA animations */
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(5deg);
+  }
+}
+
+@keyframes pizza-ingredients-dance {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-5px) rotate(5deg) scale(1.05);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-3deg) scale(1.1);
+  }
+  75% {
+    transform: translateY(-5px) rotate(3deg) scale(1.05);
+  }
+}
+
+@keyframes chef-cooking {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) rotate(180deg);
+  }
+}
+
+@keyframes logo-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 0 40px rgba(251, 146, 60, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.6), 0 0 80px rgba(251, 146, 60, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes logo-float-rotate {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(-1deg);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 3s ease-in-out infinite;
+}
+
+.animate-pizza-ingredients-dance {
+  animation: pizza-ingredients-dance 2.5s ease-in-out infinite;
+}
+
+.animate-chef-cooking {
+  animation: chef-cooking 2s ease-in-out infinite;
+}
+
+.animate-sparkle-twinkle {
+  animation: sparkle-twinkle 1.5s ease-in-out infinite;
+}
+
+.animate-logo-glow-pulse {
+  animation: logo-glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-logo-float-rotate {
+  animation: logo-float-rotate 4s ease-in-out infinite;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+.animation-delay-5000 {
+  animation-delay: 5s;
+}
+
+.animate-wiggle {
+  animation: wiggle 1s ease-in-out;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+/* Stagger animations */
+.animate-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.animate-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.animate-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.animate-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.animate-stagger-5 {
+  animation-delay: 0.5s;
+}
+
+/* Hover animations */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-glow {
+  transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 30px rgba(251, 146, 60, 0.4);
+}
+
+@layer base {
+  :root {
+    --background: 40 29% 94%;
+    --foreground: 228 25% 15%;
+
+    --card: 40 29% 94%;
+    --card-foreground: 228 25% 15%;
+
+    --popover: 40 29% 94%;
+    --popover-foreground: 228 25% 15%;
+
+    --primary: 340 85% 32%;
+    --primary-foreground: 40 29% 94%;
+
+    --secondary: 40 29% 94%;
+    --secondary-foreground: 340 85% 32%;
+
+    --muted: 40 29% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 45 93% 47%;
+    --accent-foreground: 228 25% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 40 29% 88%;
+    --input: 40 29% 88%;
+    --ring: 340 85% 32%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Logo loading optimizations */
+@layer utilities {
+  .logo-smooth-load {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .logo-smooth-load.loaded {
+    opacity: 1;
+  }
+
+  /* Prevent layout shift during logo loading */
+  .logo-container {
+    min-height: 48px; /* Adjust based on your logo size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Preload critical images */
+  .preload-logo {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Hero image loading optimizations */
+  .hero-image-container {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-image-loading {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Hero image column stability - prevent disappearing when authenticated */
+  .hero-image-column {
+    position: relative !important;
+    z-index: 15 !important;
+    /* Ensure the column maintains its space */
+    min-height: 550px !important;
+    /* Prevent layout shifts */
+    flex-shrink: 0 !important;
+    /* Force visibility */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent any transforms that might hide it */
+    transform: none !important;
+  }
+
+  .hero-main-image {
+    /* Ensure image stays visible with maximum priority */
+    position: relative !important;
+    z-index: 20 !important;
+    /* Prevent image from being hidden by other elements */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Prevent any CSS that might hide the image */
+    max-width: 100% !important;
+    height: 500px !important;
+    min-height: 400px !important;
+    /* Ensure it's always on top */
+    isolation: isolate !important;
+  }
+
+  /* Ensure hero section maintains proper layout when order tracker appears */
+  .hero-container-mobile {
+    position: relative;
+    z-index: 1;
+    /* Ensure hero content stays above background elements */
+    isolation: isolate;
+  }
+
+  /* Hero grid stability - force proper layout */
+  .hero-main-grid {
+    /* Ensure grid maintains proper layout */
+    position: relative !important;
+    z-index: 10 !important;
+    /* Prevent grid collapse */
+    min-height: 80vh !important;
+    /* Force grid display */
+    display: grid !important;
+    /* Ensure both columns maintain their space */
+    grid-template-columns: 1fr 1fr !important;
+    /* Prevent any layout issues */
+    width: 100% !important;
+    gap: 3rem !important;
+  }
+
+  @media (max-width: 1023px) {
+    .hero-main-grid {
+      grid-template-columns: 1fr !important;
+      gap: 3rem !important;
+      /* Ensure both columns are still visible on mobile */
+      min-height: auto !important;
+    }
+
+    /* Force hero image column to be visible on mobile */
+    .hero-image-column {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      order: 2 !important; /* Show after logo on mobile */
+    }
+  }
+
+  /* Additional safety for very small screens */
+  @media (max-width: 768px) {
+    .hero-image-column {
+      min-height: 420px !important;
+      margin-top: 2rem !important;
+    }
+
+    .hero-main-image {
+      min-height: 350px !important;
+      height: 380px !important;
+    }
+  }
+
+  /* Desktop specific styles */
+  @media (min-width: 769px) {
+    .hero-main-image {
+      min-height: 450px !important;
+      height: 500px !important;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Smooth image transitions */
+  .image-fade-in {
+    transition: opacity 0.5s ease-in-out, transform 0.3s ease-in-out;
+  }
+
+  .image-fade-in.loaded {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .image-fade-in:not(.loaded) {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+
+  /* Mobile admin panel optimizations */
+  @media (max-width: 768px) {
+    /* Improve touch targets for mobile */
+    .admin-touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Better mobile scrolling */
+    .mobile-scroll {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+    }
+
+    /* Mobile-friendly form inputs */
+    .mobile-input {
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    /* Compact mobile cards */
+    .mobile-card {
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Mobile button improvements */
+    .mobile-button {
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+
+    /* Better mobile typography */
+    .mobile-text-sm {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .mobile-text-xs {
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    /* Mobile spacing utilities */
+    .mobile-p-2 {
+      padding: 8px;
+    }
+
+    .mobile-p-3 {
+      padding: 12px;
+    }
+
+    .mobile-gap-2 {
+      gap: 8px;
+    }
+
+    .mobile-gap-3 {
+      gap: 12px;
+    }
+
+    /* Mobile gallery optimizations */
+    .mobile-gallery-image {
+      /* Ensure images are fully visible on mobile */
+      min-height: 240px;
+      max-height: 320px;
+      /* Better touch interaction */
+      touch-action: pan-x pan-y;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .mobile-gallery-image img {
+      /* Better image fitting for mobile */
+      object-fit: contain;
+      background: #f8f9fa;
+      /* Smooth transitions */
+      transition: opacity 0.3s ease;
+    }
+
+    /* Larger touch targets for mobile gallery navigation */
+    .mobile-gallery-nav {
+      min-height: 48px;
+      min-width: 48px;
+      padding: 12px;
+    }
+  }
+
+  /* Desktop gallery optimizations */
+  @media (min-width: 768px) {
+    .desktop-gallery-image {
+      height: 240px;
+    }
+
+    .desktop-gallery-image img {
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .desktop-gallery-image:hover img {
+      transform: scale(1.05);
+    }
+  }
+
+  /* Admin panel specific mobile improvements */
+  @media (max-width: 640px) {
+    /* Stack admin form elements vertically on small screens */
+    .admin-form-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Improve admin card layouts */
+    .admin-card-mobile {
+      margin: 0 4px;
+      border-radius: 12px;
+    }
+
+    /* Better mobile navigation */
+    .admin-nav-mobile {
+      padding: 8px;
+      gap: 8px;
+    }
+
+    /* Mobile-optimized admin buttons */
+    .admin-button-mobile {
+      width: 100%;
+      justify-content: center;
+      padding: 12px;
+      font-size: 14px;
+    }
+  }
+
+  /* Hero section mobile video optimizations */
+  @media (max-width: 768px) {
+    /* Ensure hero video covers full screen on mobile */
+    .hero-video-mobile {
+      object-fit: cover !important;
+      object-position: center center !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      min-width: 100% !important;
+      min-height: 100% !important;
+      transform: scale(1.05) !important;
+    }
+
+    /* Hero background image mobile optimization */
+    .hero-bg-mobile {
+      background-size: cover !important;
+      background-position: center center !important;
+      background-attachment: scroll !important;
+      min-height: 100vh !important;
+      min-width: 100vw !important;
+    }
+
+    /* Prevent video overflow on mobile - but allow content to flow */
+    .hero-container-mobile {
+      overflow-x: hidden !important;
+      position: relative !important;
+      /* Remove fixed height to allow content to show */
+      min-height: 100vh !important;
+      /* Allow content to extend beyond viewport if needed */
+      overflow-y: visible !important;
+    }
+
+    /* Better mobile video performance */
+    video {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+
+    /* Ensure hero content is visible on mobile */
+    .hero-container-mobile .container {
+      position: relative !important;
+      z-index: 10 !important;
+    }
+
+    /* Mobile logo optimizations */
+    .hero-container-mobile img {
+      max-width: 90vw !important;
+      height: auto !important;
+    }
+
+    /* Mobile decorative elements visibility */
+    .hero-container-mobile .absolute {
+      z-index: 5 !important;
+    }
+  }
+
+  /* Specific optimizations for very small screens */
+  @media (max-width: 480px) {
+    .hero-video-mobile {
+      transform: scale(1.1) !important;
+    }
+  }
+
+  /* Landscape mobile optimization */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .hero-video-mobile {
+      object-fit: cover !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      transform: scale(1.02) !important;
+    }
+  }
+}
+
+/* Flegrea-specific utility classes */
+@layer utilities {
+  .flegrea-btn-primary {
+    @apply bg-flegrea-burgundy hover:bg-flegrea-deep-red text-white font-montserrat font-medium px-6 py-3 rounded-lg transition-all duration-300;
+    box-shadow: 0 4px 14px 0 rgba(139, 21, 56, 0.25);
+  }
+
+  .flegrea-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(139, 21, 56, 0.35);
+  }
+
+  .flegrea-btn-secondary {
+    @apply border-2 border-flegrea-burgundy text-flegrea-burgundy hover:bg-flegrea-burgundy hover:text-white font-montserrat font-medium px-6 py-3 rounded-lg transition-all duration-300;
+  }
+
+  .flegrea-heading {
+    @apply font-montserrat font-bold text-flegrea-dark-navy;
+  }
+
+  .flegrea-script {
+    @apply font-dancing text-flegrea-burgundy;
+  }
+
+  .flegrea-body {
+    @apply font-inter text-flegrea-soft-gray;
+  }
+
+  .flegrea-card {
+    @apply bg-flegrea-warm-white border border-flegrea-light-gray rounded-xl shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+
+  .flegrea-hero-bg {
+    background: linear-gradient(135deg, var(--flegrea-dark-navy) 0%, rgba(26, 27, 46, 0.8) 100%);
+  }
+
+  .flegrea-section-bg {
+    background-color: var(--flegrea-cream);
+  }
+
+  .flegrea-accent-text {
+    @apply text-flegrea-gold-accent font-medium;
+  }
+
+  .flegrea-glow {
+    animation: flegreaGlow 2s ease-in-out infinite;
+  }
+
+  .flegrea-fade-in {
+    animation: flegreaFadeIn 0.8s ease-out forwards;
+  }
+
+  /* Modal animations */
+  .animate-in {
+    animation-fill-mode: both;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .slide-in-from-bottom-4 {
+    animation: slideInFromBottom 0.3s ease-out;
+  }
+
+  .slide-in-from-bottom-6 {
+    animation: slideInFromBottom 0.5s ease-out;
+  }
+
+  .scale-in-95 {
+    animation: scaleIn 0.5s ease-out;
+  }
+}
+
+/* Modal keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Motorcycle delivery tracking animations */
+@keyframes motorcycle-ride {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(1deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(-1deg);
+  }
+}
+
+@keyframes speed-lines {
+  0% {
+    opacity: 0;
+    transform: translateX(0px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+@keyframes delivery-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes road-scroll {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes pizza-steam {
+  0%, 100% {
+    opacity: 0.7;
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.1);
+  }
+}
+
+@keyframes roadDash {
+  0% { background-position: 0px 0px; }
+  100% { background-position: 40px 0px; }
+}
+
+.animate-motorcycle-ride {
+  animation: motorcycle-ride 2s ease-in-out infinite;
+}
+
+.animate-speed-lines {
+  animation: speed-lines 1s ease-out infinite;
+}
+
+.animate-delivery-bounce {
+  animation: delivery-bounce 1s ease-in-out infinite;
+}
+
+.animate-road-scroll {
+  animation: road-scroll 3s linear infinite;
+}
+
+.animate-pizza-steam {
+  animation: pizza-steam 2s ease-in-out infinite;
+}
+
+/* Enhanced Order Tracking Animations */
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+  }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 165, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 165, 0, 0.6);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.animate-card-float {
+  animation: cardFloat 3s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: shimmer 2s infinite;
+}
+
+.animate-status-pulse {
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+
+/* 3D Transform Effects */
+.transform-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px) rotateX(5deg);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+}
+
+/* Enhanced Motorcycle Animation */
+@keyframes motorcycleRide {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(-1deg);
+  }
+  75% {
+    transform: translateY(2px) rotate(1deg);
+  }
+}
+
+.animate-motorcycle-enhanced {
+  animation: motorcycleRide 0.8s ease-in-out infinite;
+}
+
+/* Progress Bar Enhancements */
+@keyframes progressFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 0%; }
+}
+
+.animate-progress-flow {
+  background-size: 200% 100%;
+  animation: progressFlow 2s linear infinite;
+}

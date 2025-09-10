@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Functionality Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .warning { color: #fbbf24; }
+        .info { color: #60a5fa; }
+        h1, h2, h3 { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Pizzeria Regina 2000 - Button Functionality Test</h1>
+        <p>This tool will help diagnose button functionality issues on your website.</p>
+
+        <div class="test-section">
+            <h3>🌐 Step 1: Open Website</h3>
+            <button class="button" onclick="openWebsite()">Open Website in New Tab</button>
+            <p>First, open your website in a new tab, then come back here to run the tests.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Step 2: Inject Debug Script</h3>
+            <button class="button" onclick="injectDebugScript()">Inject Debug Script</button>
+            <div id="inject-result" class="result"></div>
+            <p>This will inject the debug script into your website's console.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Step 3: Run Button Tests</h3>
+            <button class="button" onclick="runButtonTests()">Run All Button Tests</button>
+            <div id="button-test-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🛒 Step 4: Test Cart Functionality</h3>
+            <button class="button" onclick="testCartButtons()">Test Cart Buttons</button>
+            <div id="cart-test-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧭 Step 5: Test Navigation</h3>
+            <button class="button" onclick="testNavigation()">Test Navigation Buttons</button>
+            <div id="nav-test-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Step 6: Manual Fix Suggestions</h3>
+            <button class="button" onclick="showFixSuggestions()">Show Fix Suggestions</button>
+            <div id="fix-suggestions" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Test Results Summary</h3>
+            <div id="summary-result" class="result">
+                <p>Run the tests above to see results</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let websiteWindow = null;
+
+        function openWebsite() {
+            websiteWindow = window.open('http://localhost:3002', '_blank');
+            document.getElementById('inject-result').innerHTML = 
+                '<span class="info">✅ Website opened in new tab. Switch to it and then come back to continue testing.</span>';
+        }
+
+        function injectDebugScript() {
+            if (!websiteWindow) {
+                document.getElementById('inject-result').innerHTML = 
+                    '<span class="error">❌ Please open the website first!</span>';
+                return;
+            }
+
+            try {
+                // Inject the debug script
+                const script = websiteWindow.document.createElement('script');
+                script.textContent = `
+                    // Debug script to test button functionality
+                    console.log('🔍 Starting button functionality debug...');
+                    
+                    function testAllButtons() {
+                        console.log('🔍 Testing all buttons on the page...');
+                        const buttons = document.querySelectorAll('button');
+                        console.log(\`Found \${buttons.length} buttons on the page\`);
+                        
+                        buttons.forEach((button, index) => {
+                            const text = button.textContent?.trim() || 'No text';
+                            const disabled = button.disabled;
+                            console.log(\`Button \${index + 1}: "\${text}" - Disabled: \${disabled}\`);
+                        });
+                        return buttons.length;
+                    }
+                    
+                    function testCartFunctionality() {
+                        console.log('🛒 Testing cart functionality...');
+                        const cartButtons = document.querySelectorAll('button[title*="carrello"], button[title*="cart"]');
+                        console.log(\`Found \${cartButtons.length} cart-related buttons\`);
+                        return cartButtons.length;
+                    }
+                    
+                    function testNavigationButtons() {
+                        console.log('🧭 Testing navigation buttons...');
+                        const navButtons = document.querySelectorAll('button[onclick*="scroll"]');
+                        console.log(\`Found \${navButtons.length} navigation buttons\`);
+                        return navButtons.length;
+                    }
+                    
+                    window.testAllButtons = testAllButtons;
+                    window.testCartFunctionality = testCartFunctionality;
+                    window.testNavigationButtons = testNavigationButtons;
+                    
+                    console.log('✅ Debug script injected successfully!');
+                `;
+                websiteWindow.document.head.appendChild(script);
+                
+                document.getElementById('inject-result').innerHTML = 
+                    '<span class="success">✅ Debug script injected successfully! Check the website console for logs.</span>';
+            } catch (error) {
+                document.getElementById('inject-result').innerHTML = 
+                    '<span class="error">❌ Error injecting script: ' + error.message + '</span>';
+            }
+        }
+
+        function runButtonTests() {
+            if (!websiteWindow) {
+                document.getElementById('button-test-result').innerHTML = 
+                    '<span class="error">❌ Please open the website first!</span>';
+                return;
+            }
+
+            try {
+                const buttonCount = websiteWindow.testAllButtons();
+                document.getElementById('button-test-result').innerHTML = 
+                    '<span class="success">✅ Found ' + buttonCount + ' buttons. Check console for details.</span>';
+            } catch (error) {
+                document.getElementById('button-test-result').innerHTML = 
+                    '<span class="error">❌ Error testing buttons: ' + error.message + '</span>';
+            }
+        }
+
+        function testCartButtons() {
+            if (!websiteWindow) {
+                document.getElementById('cart-test-result').innerHTML = 
+                    '<span class="error">❌ Please open the website first!</span>';
+                return;
+            }
+
+            try {
+                const cartButtonCount = websiteWindow.testCartFunctionality();
+                document.getElementById('cart-test-result').innerHTML = 
+                    '<span class="success">✅ Found ' + cartButtonCount + ' cart buttons. Check console for details.</span>';
+            } catch (error) {
+                document.getElementById('cart-test-result').innerHTML = 
+                    '<span class="error">❌ Error testing cart: ' + error.message + '</span>';
+            }
+        }
+
+        function testNavigation() {
+            if (!websiteWindow) {
+                document.getElementById('nav-test-result').innerHTML = 
+                    '<span class="error">❌ Please open the website first!</span>';
+                return;
+            }
+
+            try {
+                const navButtonCount = websiteWindow.testNavigationButtons();
+                document.getElementById('nav-test-result').innerHTML = 
+                    '<span class="success">✅ Found ' + navButtonCount + ' navigation buttons. Check console for details.</span>';
+            } catch (error) {
+                document.getElementById('nav-test-result').innerHTML = 
+                    '<span class="error">❌ Error testing navigation: ' + error.message + '</span>';
+            }
+        }
+
+        function showFixSuggestions() {
+            const suggestions = `
+🔧 COMMON BUTTON ISSUES & FIXES:
+
+1. 🛒 CART BUTTONS NOT WORKING:
+   - Check if useSimpleCart hook is properly connected
+   - Verify SimpleCartProvider wraps the app
+   - Check for JavaScript errors in console
+   - Ensure product data has required fields (id, name, price)
+
+2. 🧭 NAVIGATION BUTTONS NOT WORKING:
+   - Check if scroll target elements exist (getElementById)
+   - Verify smooth scroll behavior is supported
+   - Check for CSS conflicts preventing scroll
+
+3. 🖱️ GENERAL BUTTON ISSUES:
+   - Check if buttons are disabled (disabled attribute)
+   - Verify click handlers are attached
+   - Check for CSS pointer-events: none
+   - Ensure buttons are not covered by other elements
+
+4. ⚛️ REACT SPECIFIC ISSUES:
+   - Check for component re-rendering issues
+   - Verify state management (useState, useContext)
+   - Check for missing dependencies in useEffect
+
+5. 🎨 STYLING ISSUES:
+   - Check if buttons are visible (opacity, display)
+   - Verify z-index stacking
+   - Check for hover states working
+
+6. 📱 MOBILE ISSUES:
+   - Check touch events on mobile
+   - Verify button sizes for touch targets
+   - Check for mobile-specific CSS issues
+            `;
+            
+            document.getElementById('fix-suggestions').innerHTML = 
+                '<span class="info">' + suggestions + '</span>';
+        }
+    </script>
+</body>
+</html>
