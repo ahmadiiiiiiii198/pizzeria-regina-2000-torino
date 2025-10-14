@@ -7,6 +7,11 @@
     <title>Pizzeria Regina 2000 Torino - Authentic Italian Pizza & Restaurant</title>
     <meta name="description" content="Authentic Italian pizza and traditional cuisine in the heart of Torino. Order online for delivery or takeaway." />
     <meta name="author" content="Pizzeria Regina 2000 Torino" />
+    
+    <!-- Cache Busting - Force fresh content -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png" />
@@ -34,16 +39,38 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Pizzeria Regina 2000" />
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration with Cache Busting -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          // Add timestamp to service worker URL to force update
+          const swUrl = '/sw.js?v=' + Date.now();
+          
+          navigator.serviceWorker.register(swUrl)
             .then((registration) => {
-              console.log('SW registered: ', registration);
+              console.log('✅ SW registered: ', registration);
+              
+              // Check for updates every 60 seconds
+              setInterval(() => {
+                registration.update();
+              }, 60000);
+              
+              // Handle updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 New version available! Refresh to update.');
+                    // Optionally show a notification to user
+                    if (confirm('New version available! Reload to update?')) {
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
             })
             .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
+              console.log('❌ SW registration failed: ', registrationError);
             });
         });
       }

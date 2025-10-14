@@ -16,14 +16,17 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     copyPublicDir: true,
     minify: 'esbuild',
+    // Cache busting - force new hash on every build
+    cssCodeSplit: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html')
       },
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Use hash for aggressive cache busting
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],

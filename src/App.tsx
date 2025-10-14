@@ -11,6 +11,7 @@ import { BusinessHoursProvider } from "@/contexts/BusinessHoursContext";
 import { initializeDatabaseOnlyTracking } from "@/utils/clearLocalStorageOrders";
 
 import ErrorBoundary from "./components/ErrorBoundary";
+import { UpdateNotification } from "./components/UpdateNotification";
 // import DiagnosticInfo from "./components/DiagnosticInfo"; // Removed diagnostic button
 import BackgroundInitializer from "./components/BackgroundInitializer";
 // import ButtonDebugger from "./components/ButtonDebugger"; // Removed debug component
@@ -42,7 +43,7 @@ const queryClient = new QueryClient({
       retry: 1, // Only retry once instead of 3 times
       retryDelay: 1000, // Wait 1 second before retry
       staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-      cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (renamed from cacheTime)
       refetchOnWindowFocus: false, // Don't refetch on window focus
       refetchOnMount: false, // Don't refetch on component mount if data exists
     },
@@ -63,6 +64,7 @@ const App = () => (
               <BackgroundInitializer />
             {/* OrderNotificationSystem now only loads in admin panel */}
             {/* ButtonDebugger removed - no more debug overlays */}
+            <UpdateNotification />
             <Toaster />
             <Sonner />
             <BrowserRouter>
