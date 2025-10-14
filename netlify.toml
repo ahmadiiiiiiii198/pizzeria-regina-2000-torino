@@ -5,10 +5,35 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Proper headers for JS files
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# SPA redirect - this should be LAST
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
 
 [dev]
   command = "npm run dev"
