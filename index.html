@@ -39,6 +39,56 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Pizzeria Regina 2000" />
 
+    <!-- Aggressive Cache Busting - Runs IMMEDIATELY on page load -->
+    <script>
+      (function() {
+        console.log('🔄 Cache busting check starting...');
+        
+        // Get current page version from meta tag (will be set by build)
+        const APP_VERSION = '{{BUILD_VERSION}}'; // This will be replaced during build
+        const STORAGE_KEY = 'app_cache_version';
+        
+        // Check stored version
+        const storedVersion = localStorage.getItem(STORAGE_KEY);
+        
+        if (storedVersion && storedVersion !== APP_VERSION) {
+          console.log('🆕 New version detected!');
+          console.log('   Old:', storedVersion);
+          console.log('   New:', APP_VERSION);
+          
+          // Clear ALL caches
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              names.forEach(name => {
+                console.log('🗑️ Deleting cache:', name);
+                caches.delete(name);
+              });
+            });
+          }
+          
+          // Unregister service workers
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+              registrations.forEach(reg => reg.unregister());
+            });
+          }
+          
+          // Store new version
+          localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          
+          // Force reload from server (bypass cache)
+          console.log('🔄 Forcing hard reload...');
+          window.location.reload(true);
+        } else if (!storedVersion) {
+          // First visit
+          localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          console.log('✅ Version stored:', APP_VERSION);
+        } else {
+          console.log('✅ Version up to date:', APP_VERSION);
+        }
+      })();
+    </script>
+
     <!-- Service Worker Registration with Cache Busting -->
     <script>
       if ('serviceWorker' in navigator) {
@@ -61,10 +111,8 @@
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     console.log('🔄 New version available! Refresh to update.');
-                    // Optionally show a notification to user
-                    if (confirm('New version available! Reload to update?')) {
-                      window.location.reload();
-                    }
+                    // Force reload immediately
+                    window.location.reload(true);
                   }
                 });
               });
