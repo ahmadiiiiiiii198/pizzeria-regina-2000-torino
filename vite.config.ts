@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   base: '/',
   server: {
     host: "::",
-    port: 4000,
+    port: 3000,
   },
   build: {
     outDir: 'dist',

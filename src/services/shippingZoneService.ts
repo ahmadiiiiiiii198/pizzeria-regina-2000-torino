@@ -400,17 +400,37 @@ class ShippingZoneService {
   }
 
   // Set restaurant location
-  public async setRestaurantLocation(address: string) {
-    const geocodeResult = await this.geocodeAddress(address);
-    if (geocodeResult) {
-      // Keep the original address format, only update coordinates
-      this.settings.restaurantAddress = address; // Preserve the original address
-      this.settings.restaurantLat = geocodeResult.lat;
-      this.settings.restaurantLng = geocodeResult.lng;
-      this.saveSettings();
-      return true;
+  public async setRestaurantLocation(address: string): Promise<boolean> {
+    console.log('📍 [ShippingZone] Setting restaurant location:', address);
+    
+    try {
+      const geocodeResult = await this.geocodeAddress(address);
+      
+      if (geocodeResult) {
+        console.log('✅ [ShippingZone] Geocoding successful:', geocodeResult);
+        
+        // Keep the original address format, only update coordinates
+        this.settings.restaurantAddress = address; // Preserve the original address
+        this.settings.restaurantLat = geocodeResult.lat;
+        this.settings.restaurantLng = geocodeResult.lng;
+        
+        // CRITICAL FIX: await the save operation
+        await this.saveSettings();
+        
+        console.log('✅ [ShippingZone] Location saved to database');
+        console.log('   Address:', this.settings.restaurantAddress);
+        console.log('   Coordinates:', this.settings.restaurantLat, this.settings.restaurantLng);
+        
+        return true;
+      }
+      
+      console.error('❌ [ShippingZone] Geocoding returned no results');
+      return false;
+      
+    } catch (error) {
+      console.error('❌ [ShippingZone] Error setting restaurant location:', error);
+      return false;
     }
-    return false;
   }
 
   // Initialize default delivery zones

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { phoneNotificationService } from '@/services/phoneNotificationService';
 import {
   Bell,
   VolumeX,
@@ -92,6 +93,19 @@ class ContinuousAudioNotifier {
     this.loadActiveSound();
   }
 
+  // Ensure AudioContext is resumed (some browsers suspend it until user gesture)
+  private resumeAudioContextIfNeeded() {
+    try {
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume()
+          .then(() => console.log('🔊 AudioContext resumed'))
+          .catch((e) => console.error('❌ Failed to resume AudioContext:', e));
+      }
+    } catch (e) {
+      console.error('❌ Error checking/resuming AudioContext:', e);
+    }
+  }
+
   private async loadActiveSound() {
     try {
       const { data, error } = await supabase
@@ -170,6 +184,9 @@ class ContinuousAudioNotifier {
       return;
     }
 
+    // Try resuming the context before starting playback
+    this.resumeAudioContextIfNeeded();
+
     this.isRinging = true;
     this.playRingTone();
   }
@@ -241,6 +258,8 @@ class ContinuousAudioNotifier {
 
   private playDualToneRing() {
     if (!this.audioContext) return;
+    // Make sure context is running
+    this.resumeAudioContextIfNeeded();
 
     // Create two oscillators for a richer ringing sound
     const oscillator1 = this.audioContext.createOscillator();
@@ -663,6 +682,9 @@ const OrderDashboardPro: React.FC = () => {
     if (!newSoundState) {
       // If disabling sound, stop any current ringing
       audioNotifier.stopRinging();
+    } else {
+      try { phoneNotificationService.enableAudioWithUserGesture(); } catch {}
+      try { audioNotifier.testRing(); } catch {}
     }
 
     toast({

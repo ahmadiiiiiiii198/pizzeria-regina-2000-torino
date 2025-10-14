@@ -405,7 +405,7 @@ const ContactSection = () => {
               <CardContent className="p-0">
                 <div className="h-64 relative">
                   <iframe
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyBkHCjFa0GKD7lJThAyFnSaeCXFDsBtJhs&q=Corso+Regina+Margherita+53+10124+Torino+Italy&zoom=16&maptype=roadmap"
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyDnJS3eyAnguEeCdZIMmYUNzq8LOBhmkMA&q=Corso+Regina+Margherita+53+10124+Torino+Italy&zoom=16&maptype=roadmap"
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}

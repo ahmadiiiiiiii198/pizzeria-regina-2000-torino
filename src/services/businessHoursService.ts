@@ -44,6 +44,12 @@ class BusinessHoursService {
     }
   );
 
+  private constructor() {
+    // Clear any stale cache on initialization (page refresh)
+    // This ensures we always fetch fresh data after a page reload
+    this.clearCache();
+  }
+
   static getInstance(): BusinessHoursService {
     if (!BusinessHoursService.instance) {
       BusinessHoursService.instance = new BusinessHoursService();
@@ -57,8 +63,9 @@ class BusinessHoursService {
   async getBusinessHours(): Promise<WeeklyHours> {
     const now = Date.now();
     
-    // Return cached data if still valid
-    if (this.cachedHours && (now - this.lastFetch) < this.CACHE_DURATION) {
+    // Return cached data if still valid AND we've already done the initial fetch after page load
+    // Skip cache on very first fetch after constructor to ensure fresh data
+    if (this.cachedHours && (now - this.lastFetch) < this.CACHE_DURATION && this.lastFetch > 0) {
       return this.cachedHours;
     }
 

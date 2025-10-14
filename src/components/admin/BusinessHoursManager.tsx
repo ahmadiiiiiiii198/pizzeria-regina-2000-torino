@@ -27,15 +27,9 @@ interface WeeklyHours {
 
 const BusinessHoursManager = () => {
   const { toast } = useToast();
-  const [hours, setHours] = useState<WeeklyHours>({
-    monday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    tuesday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    wednesday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    thursday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    friday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    saturday: { isOpen: true, openTime: '18:30', closeTime: '22:30' },
-    sunday: { isOpen: true, openTime: '18:30', closeTime: '22:30' }
-  });
+  // Initialize with null to avoid showing misleading default times
+  // Component will show loading state until real data is fetched
+  const [hours, setHours] = useState<WeeklyHours | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -57,11 +51,12 @@ const BusinessHoursManager = () => {
   const loadBusinessHours = async () => {
     try {
       setIsLoading(true);
+      console.log('🔄 [BusinessHoursManager] Loading business hours from service...');
       const businessHours = await businessHoursService.getBusinessHours();
       setHours(businessHours);
-      console.log('✅ Business hours loaded:', businessHours);
+      console.log('✅ [BusinessHoursManager] Business hours loaded successfully:', businessHours);
     } catch (error) {
-      console.error('❌ Error loading business hours:', error);
+      console.error('❌ [BusinessHoursManager] Error loading business hours:', error);
       toast({
         title: "Errore",
         description: "Impossibile caricare gli orari di apertura",
@@ -73,25 +68,34 @@ const BusinessHoursManager = () => {
   };
 
   const updateDayHours = (day: keyof WeeklyHours, field: keyof DayHours, value: any) => {
-    setHours(prev => ({
-      ...prev,
-      [day]: {
-        ...prev[day],
-        [field]: value
-      }
-    }));
+    if (!hours) return; // Don't update if hours not loaded yet
+    
+    setHours(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [day]: {
+          ...prev[day],
+          [field]: value
+        }
+      };
+    });
   };
 
   const saveBusinessHours = async () => {
+    if (!hours) return; // Can't save if no hours loaded
+    
     try {
       setIsSaving(true);
+      
+      console.log('💾 [BusinessHoursManager] Saving business hours to database...');
       
       // Save to database
       const { error } = await supabase
         .from('settings')
         .upsert({
           key: 'businessHours',
-          value: hours,
+          value: hours as any, // Cast to any to satisfy Supabase Json type
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'key'
@@ -100,6 +104,8 @@ const BusinessHoursManager = () => {
       if (error) {
         throw error;
       }
+
+      console.log('✅ [BusinessHoursManager] Database update successful');
 
       // Force complete refresh to verify changes immediately
       console.log('🔄 [BusinessHoursManager] Forcing complete refresh...');
@@ -114,9 +120,9 @@ const BusinessHoursManager = () => {
         description: "Orari di apertura salvati con successo. Le modifiche sono attive immediatamente.",
       });
 
-      console.log('✅ Business hours saved successfully');
+      console.log('✅ [BusinessHoursManager] Save operation completed successfully');
     } catch (error) {
-      console.error('❌ Error saving business hours:', error);
+      console.error('❌ [BusinessHoursManager] Error saving business hours:', error);
       toast({
         title: "Errore",
         description: "Impossibile salvare gli orari di apertura",
@@ -128,6 +134,8 @@ const BusinessHoursManager = () => {
   };
 
   const setAllDaysSame = () => {
+    if (!hours) return; // Can't copy if no hours loaded
+    
     const mondayHours = hours.monday;
     const newHours = { ...hours };
     
@@ -142,7 +150,7 @@ const BusinessHoursManager = () => {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || !hours) {
     return (
       <div className="flex items-center justify-center p-8">
         <RefreshCw className="h-6 w-6 animate-spin mr-2" />
