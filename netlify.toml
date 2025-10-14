@@ -1,9 +1,11 @@
 [build]
   publish = "dist"
-  command = "npm run build"
-
+  command = "rm -rf dist && npm run build"
+  
 [build.environment]
   NODE_VERSION = "20"
+  # Prevent caching issues
+  NPM_FLAGS = "--legacy-peer-deps"
 
 # Proper headers for JS files
 [[headers]]
