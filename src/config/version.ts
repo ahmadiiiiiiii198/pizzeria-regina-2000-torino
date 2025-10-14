@@ -1,6 +1,7 @@
 // App version for cache busting
-// Update this version number whenever you want to force clients to refresh
-export const APP_VERSION = '1.0.' + Date.now();
+// This version should be manually updated or set via environment variable
+export const APP_VERSION = import.meta.env.VITE_APP_VERSION || '1.0.0';
+export const BUILD_TIME = import.meta.env.VITE_BUILD_TIME || new Date().toISOString();
 export const CACHE_VERSION = 'v' + APP_VERSION;
 
 // Function to check if app needs update
