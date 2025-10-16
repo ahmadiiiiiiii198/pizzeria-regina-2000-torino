@@ -3,7 +3,7 @@
   "short_name": "Ordini Regina",
   "description": "Sistema di gestione ordini per Pizzeria Regina 2000 - App mobile standalone",
   "start_url": "/ordini?source=pwa",
-  "scope": "/ordini",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#dc2626",
