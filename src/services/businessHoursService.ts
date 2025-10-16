@@ -1,10 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
 import { createClient } from '@supabase/supabase-js';
 
-interface DayHours {
+interface TimePeriod {
   isOpen: boolean;
   openTime: string;
   closeTime: string;
+}
+
+interface DayHours {
+  lunch: TimePeriod;
+  dinner: TimePeriod;
 }
 
 interface WeeklyHours {
@@ -131,15 +136,24 @@ class BusinessHoursService {
    * Get default business hours (fallback)
    */
   private getDefaultHours(): WeeklyHours {
-    const defaultDay: DayHours = { isOpen: true, openTime: '18:30', closeTime: '22:30' };
+    const defaultDay: DayHours = {
+      lunch: { isOpen: true, openTime: '12:00', closeTime: '14:30' },
+      dinner: { isOpen: true, openTime: '18:00', closeTime: '23:00' }
+    };
 
     return {
       monday: { ...defaultDay },
       tuesday: { ...defaultDay },
       wednesday: { ...defaultDay },
       thursday: { ...defaultDay },
-      friday: { ...defaultDay },
-      saturday: { ...defaultDay },
+      friday: {
+        lunch: { isOpen: true, openTime: '12:00', closeTime: '14:30' },
+        dinner: { isOpen: true, openTime: '18:30', closeTime: '02:00' }
+      },
+      saturday: {
+        lunch: { isOpen: false, openTime: '12:00', closeTime: '14:30' },
+        dinner: { isOpen: true, openTime: '18:30', closeTime: '02:00' }
+      },
       sunday: { ...defaultDay }
     };
   }
@@ -169,9 +183,12 @@ class BusinessHoursService {
 
     console.log('🕒 [BusinessHours] Today is:', currentDay, 'Hours:', todayHours);
 
-    // Check if business is open today
-    if (!todayHours.isOpen) {
-      console.log('🚫 [BusinessHours] Business is closed today');
+    // Check if business is open today (either lunch or dinner)
+    const lunchOpen = todayHours.lunch.isOpen;
+    const dinnerOpen = todayHours.dinner.isOpen;
+    
+    if (!lunchOpen && !dinnerOpen) {
+      console.log('🚫 [BusinessHours] Business is closed all day');
       const nextOpenTime = this.getNextOpenTime(hours, now);
       return {
         isOpen: false,
@@ -181,30 +198,37 @@ class BusinessHoursService {
       };
     }
 
-    // Check if current time is within business hours
+    // Check if current time is within lunch or dinner hours
     const currentTime = this.formatTime(now);
-    const isWithinHours = this.isTimeWithinRange(currentTime, todayHours.openTime, todayHours.closeTime);
+    const isWithinLunch = lunchOpen && this.isTimeWithinRange(currentTime, todayHours.lunch.openTime, todayHours.lunch.closeTime);
+    const isWithinDinner = dinnerOpen && this.isTimeWithinRange(currentTime, todayHours.dinner.openTime, todayHours.dinner.closeTime);
 
     console.log('🕒 [BusinessHours] Time check:', {
       currentTime,
-      openTime: todayHours.openTime,
-      closeTime: todayHours.closeTime,
-      isWithinHours
+      lunch: { isOpen: lunchOpen, hours: `${todayHours.lunch.openTime}-${todayHours.lunch.closeTime}`, withinHours: isWithinLunch },
+      dinner: { isOpen: dinnerOpen, hours: `${todayHours.dinner.openTime}-${todayHours.dinner.closeTime}`, withinHours: isWithinDinner }
     });
 
-    if (isWithinHours) {
-      console.log('✅ [BusinessHours] Business is OPEN');
+    if (isWithinLunch || isWithinDinner) {
+      const period = isWithinLunch ? 'pranzo' : 'cena';
+      console.log(`✅ [BusinessHours] Business is OPEN for ${period}`);
       return {
         isOpen: true,
-        message: 'Siamo aperti! Puoi effettuare il tuo ordine.',
+        message: `Siamo aperti per ${period}! Puoi effettuare il tuo ordine.`,
         todayHours
       };
     } else {
       console.log('❌ [BusinessHours] Business is CLOSED');
       const nextOpenTime = this.getNextOpenTime(hours, now);
+      
+      // Build hours message
+      const hoursMsg = [];
+      if (lunchOpen) hoursMsg.push(`Pranzo: ${todayHours.lunch.openTime}-${todayHours.lunch.closeTime}`);
+      if (dinnerOpen) hoursMsg.push(`Cena: ${todayHours.dinner.openTime}-${todayHours.dinner.closeTime}`);
+      
       return {
         isOpen: false,
-        message: `Siamo chiusi. Orari di oggi: ${todayHours.openTime}-${todayHours.closeTime}`,
+        message: `Siamo chiusi. Orari di oggi: ${hoursMsg.join(', ')}`,
         nextOpenTime,
         todayHours
       };
@@ -227,9 +251,10 @@ class BusinessHoursService {
       const dayKey = dayNames[dayOfWeek] as keyof WeeklyHours;
       const dayHours = hours[dayKey];
       
-      if (dayHours.isOpen) {
+      if (dayHours.lunch.isOpen || dayHours.dinner.isOpen) {
         const dayName = dayNamesItalian[dayOfWeek];
-        return `${dayName} alle ${dayHours.openTime}`;
+        const firstPeriod = dayHours.lunch.isOpen ? dayHours.lunch : dayHours.dinner;
+        return `${dayName} alle ${firstPeriod.openTime}`;
       }
     }
     
@@ -314,13 +339,21 @@ class BusinessHoursService {
     const openDays: string[] = [];
     
     Object.entries(hours).forEach(([day, dayHours]) => {
-      if (dayHours.isOpen) {
+      const periods = [];
+      if (dayHours.lunch.isOpen) {
+        periods.push(`${dayHours.lunch.openTime}-${dayHours.lunch.closeTime}`);
+      }
+      if (dayHours.dinner.isOpen) {
+        periods.push(`${dayHours.dinner.openTime}-${dayHours.dinner.closeTime}`);
+      }
+      
+      if (periods.length > 0) {
         const dayName = dayNames[day as keyof typeof dayNames];
-        openDays.push(`${dayName}: ${dayHours.openTime}-${dayHours.closeTime}`);
+        openDays.push(`${dayName}: ${periods.join(', ')}`);
       }
     });
 
-    return openDays.length > 0 ? openDays.join(', ') : 'Chiuso';
+    return openDays.length > 0 ? openDays.join(' ') : 'Chiuso';
   }
 
   /**

@@ -9,10 +9,15 @@ import { Clock, Save, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { businessHoursService } from '@/services/businessHoursService';
 
-interface DayHours {
+interface TimePeriod {
   isOpen: boolean;
   openTime: string;
   closeTime: string;
+}
+
+interface DayHours {
+  lunch: TimePeriod;
+  dinner: TimePeriod;
 }
 
 interface WeeklyHours {
@@ -67,8 +72,8 @@ const BusinessHoursManager = () => {
     }
   };
 
-  const updateDayHours = (day: keyof WeeklyHours, field: keyof DayHours, value: any) => {
-    if (!hours) return; // Don't update if hours not loaded yet
+  const updateDayHours = (day: keyof WeeklyHours, period: 'lunch' | 'dinner', field: keyof TimePeriod, value: any) => {
+    if (!hours) return;
     
     setHours(prev => {
       if (!prev) return prev;
@@ -76,7 +81,10 @@ const BusinessHoursManager = () => {
         ...prev,
         [day]: {
           ...prev[day],
-          [field]: value
+          [period]: {
+            ...prev[day][period],
+            [field]: value
+          }
         }
       };
     });
@@ -134,13 +142,19 @@ const BusinessHoursManager = () => {
   };
 
   const setAllDaysSame = () => {
-    if (!hours) return; // Can't copy if no hours loaded
+    if (!hours) return;
     
-    const mondayHours = hours.monday;
+    const mondayHours = {
+      lunch: { ...hours.monday.lunch },
+      dinner: { ...hours.monday.dinner }
+    };
     const newHours = { ...hours };
     
     Object.keys(newHours).forEach(day => {
-      newHours[day as keyof WeeklyHours] = { ...mondayHours };
+      newHours[day as keyof WeeklyHours] = {
+        lunch: { ...mondayHours.lunch },
+        dinner: { ...mondayHours.dinner }
+      };
     });
     
     setHours(newHours);
@@ -186,39 +200,80 @@ const BusinessHoursManager = () => {
         {daysOfWeek.map(({ key, label }) => (
           <Card key={key} className="border border-gray-200">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span>{label}</span>
-                <Switch
-                  checked={hours[key as keyof WeeklyHours].isOpen}
-                  onCheckedChange={(checked) => updateDayHours(key as keyof WeeklyHours, 'isOpen', checked)}
-                />
-              </CardTitle>
+              <CardTitle className="text-lg">{label}</CardTitle>
             </CardHeader>
             <CardContent>
-              {hours[key as keyof WeeklyHours].isOpen ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor={`${key}-open`}>Apertura</Label>
-                    <Input
-                      id={`${key}-open`}
-                      type="time"
-                      value={hours[key as keyof WeeklyHours].openTime}
-                      onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'openTime', e.target.value)}
+              <div className="space-y-6">
+                {/* Lunch Hours */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Pranzo</Label>
+                    <Switch
+                      checked={hours[key as keyof WeeklyHours].lunch.isOpen}
+                      onCheckedChange={(checked) => updateDayHours(key as keyof WeeklyHours, 'lunch', 'isOpen', checked)}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor={`${key}-close`}>Chiusura</Label>
-                    <Input
-                      id={`${key}-close`}
-                      type="time"
-                      value={hours[key as keyof WeeklyHours].closeTime}
-                      onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'closeTime', e.target.value)}
-                    />
-                  </div>
+                  {hours[key as keyof WeeklyHours].lunch.isOpen && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor={`${key}-lunch-open`} className="text-sm">Apertura Pranzo</Label>
+                        <Input
+                          id={`${key}-lunch-open`}
+                          type="time"
+                          value={hours[key as keyof WeeklyHours].lunch.openTime}
+                          onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'lunch', 'openTime', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`${key}-lunch-close`} className="text-sm">Chiusura Pranzo</Label>
+                        <Input
+                          id={`${key}-lunch-close`}
+                          type="time"
+                          value={hours[key as keyof WeeklyHours].lunch.closeTime}
+                          onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'lunch', 'closeTime', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <p className="text-gray-500 italic">Chiuso</p>
-              )}
+
+                {/* Dinner Hours */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Cena</Label>
+                    <Switch
+                      checked={hours[key as keyof WeeklyHours].dinner.isOpen}
+                      onCheckedChange={(checked) => updateDayHours(key as keyof WeeklyHours, 'dinner', 'isOpen', checked)}
+                    />
+                  </div>
+                  {hours[key as keyof WeeklyHours].dinner.isOpen && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor={`${key}-dinner-open`} className="text-sm">Apertura Cena</Label>
+                        <Input
+                          id={`${key}-dinner-open`}
+                          type="time"
+                          value={hours[key as keyof WeeklyHours].dinner.openTime}
+                          onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'dinner', 'openTime', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`${key}-dinner-close`} className="text-sm">Chiusura Cena</Label>
+                        <Input
+                          id={`${key}-dinner-close`}
+                          type="time"
+                          value={hours[key as keyof WeeklyHours].dinner.closeTime}
+                          onChange={(e) => updateDayHours(key as keyof WeeklyHours, 'dinner', 'closeTime', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {!hours[key as keyof WeeklyHours].lunch.isOpen && !hours[key as keyof WeeklyHours].dinner.isOpen && (
+                  <p className="text-gray-500 italic text-center py-4">Chiuso tutto il giorno</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}

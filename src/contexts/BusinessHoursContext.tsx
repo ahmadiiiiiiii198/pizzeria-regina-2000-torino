@@ -2,10 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { businessHoursService } from '@/services/businessHoursService';
 import { supabase } from '@/integrations/supabase/client';
 
-interface DayHours {
+interface TimePeriod {
   isOpen: boolean;
   openTime: string;
   closeTime: string;
+}
+
+interface DayHours {
+  lunch: TimePeriod;
+  dinner: TimePeriod;
 }
 
 interface BusinessHoursContextType {
