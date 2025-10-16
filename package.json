@@ -15,7 +15,9 @@
     "deploy:edge-function": "node scripts/deploy-edge-function.mjs",
     "setup:webhook": "node scripts/setup-webhook.mjs",
     "test:push": "node scripts/test-push-notification.mjs",
-    "setup:all": "npm run setup:supabase && npm run deploy:edge-function && npm run setup:webhook"
+    "setup:all": "npm run setup:supabase && npm run deploy:edge-function && npm run setup:webhook",
+    "auto-check": "node scripts/auto-setup-complete.mjs",
+    "create:table": "node scripts/create-database-table.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
