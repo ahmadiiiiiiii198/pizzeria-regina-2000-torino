@@ -39,126 +39,41 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Pizzeria Regina 2000" />
 
-    <!-- Smart Cache Busting - Runs on page load with loop prevention -->
+    <!-- Smart Cache Busting (Netlify-optimized) -->
     <script>
       (function() {
         'use strict';
         
-        // Configuration
         const APP_VERSION = '{{BUILD_VERSION}}';
         const STORAGE_KEY = 'pizzeria_app_version';
-        const RELOAD_COUNT_KEY = 'pizzeria_reload_count';
-        const RELOAD_TIMESTAMP_KEY = 'pizzeria_reload_timestamp';
-        const MAX_RELOAD_ATTEMPTS = 2; // Maximum reload attempts to prevent loops
-        const RELOAD_TIMEOUT = 5000; // 5 seconds minimum between reloads
         
-        console.log('🚀 Cache busting initialized - Version:', APP_VERSION);
+        console.log('🚀 App Version:', APP_VERSION);
         
-        // Safety check: prevent rapid consecutive reloads
-        function isReloadSafe() {
-          const lastReload = parseInt(sessionStorage.getItem(RELOAD_TIMESTAMP_KEY) || '0', 10);
-          const timeSinceLastReload = Date.now() - lastReload;
-          
-          if (timeSinceLastReload < RELOAD_TIMEOUT) {
-            console.warn('⚠️ Reload attempted too soon. Skipping to prevent loop.');
-            return false;
-          }
-          
-          const reloadCount = parseInt(sessionStorage.getItem(RELOAD_COUNT_KEY) || '0', 10);
-          if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
-            console.warn('⚠️ Max reload attempts reached. Clearing cache manually without reload.');
-            sessionStorage.removeItem(RELOAD_COUNT_KEY);
-            return false;
-          }
-          
-          return true;
-        }
+        // Simple version tracking for Netlify deployments
+        const storedVersion = localStorage.getItem(STORAGE_KEY);
         
-        // Clear all caches asynchronously
-        async function clearAllCaches() {
-          const promises = [];
-          
-          // Clear Cache Storage
-          if ('caches' in window) {
-            try {
-              const names = await caches.keys();
-              console.log('🗑️ Clearing', names.length, 'cache(s)');
-              promises.push(...names.map(name => caches.delete(name)));
-            } catch (e) {
-              console.error('❌ Cache clearing failed:', e);
-            }
-          }
-          
-          // Unregister service workers
-          if ('serviceWorker' in navigator) {
-            try {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              console.log('🗑️ Unregistering', registrations.length, 'service worker(s)');
-              promises.push(...registrations.map(reg => reg.unregister()));
-            } catch (e) {
-              console.error('❌ Service worker unregister failed:', e);
-            }
-          }
-          
-          await Promise.all(promises);
-          console.log('✅ All caches cleared');
-        }
-        
-        // Perform version check and cache busting
-        async function checkVersion() {
-          const storedVersion = localStorage.getItem(STORAGE_KEY);
-          
-          // First visit - store version and continue
-          if (!storedVersion) {
-            localStorage.setItem(STORAGE_KEY, APP_VERSION);
-            sessionStorage.removeItem(RELOAD_COUNT_KEY);
-            sessionStorage.removeItem(RELOAD_TIMESTAMP_KEY);
-            console.log('✅ First visit - version stored:', APP_VERSION);
-            return;
-          }
-          
-          // Version matches - all good
-          if (storedVersion === APP_VERSION) {
-            sessionStorage.removeItem(RELOAD_COUNT_KEY);
-            sessionStorage.removeItem(RELOAD_TIMESTAMP_KEY);
-            console.log('✅ Version up to date:', APP_VERSION);
-            return;
-          }
-          
-          // New version detected
-          console.log('🆕 Version update detected!');
-          console.log('   Old:', storedVersion);
-          console.log('   New:', APP_VERSION);
-          
-          // Clear caches first
-          await clearAllCaches();
-          
-          // Update stored version
+        if (!storedVersion) {
+          // First visit
           localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          console.log('✅ First visit - version stored');
+        } else if (storedVersion !== APP_VERSION) {
+          // Version changed - clear caches (Netlify headers prevent HTML caching)
+          console.log('🆕 New version detected:', storedVersion, '→', APP_VERSION);
           
-          // Check if reload is safe
-          if (!isReloadSafe()) {
-            console.log('⏩ Skipping reload for safety. Cache cleared, continuing with new version.');
-            sessionStorage.removeItem(RELOAD_COUNT_KEY);
-            return;
+          // Clear service worker caches
+          if ('caches' in window) {
+            caches.keys().then(keys => {
+              keys.forEach(key => caches.delete(key));
+              console.log('✅ Cleared', keys.length, 'cache(s)');
+            });
           }
           
-          // Increment reload counter
-          const currentCount = parseInt(sessionStorage.getItem(RELOAD_COUNT_KEY) || '0', 10);
-          sessionStorage.setItem(RELOAD_COUNT_KEY, String(currentCount + 1));
-          sessionStorage.setItem(RELOAD_TIMESTAMP_KEY, String(Date.now()));
-          
-          // Perform reload
-          console.log('🔄 Reloading page to apply new version...');
-          setTimeout(() => {
-            window.location.href = window.location.href.split('?')[0] + '?v=' + APP_VERSION;
-          }, 100); // Small delay to ensure storage is written
+          // Update version
+          localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          console.log('✅ Version updated - refresh complete');
+        } else {
+          console.log('✅ Version current');
         }
-        
-        // Run version check
-        checkVersion().catch(err => {
-          console.error('❌ Version check failed:', err);
-        });
       })();
     </script>
 
