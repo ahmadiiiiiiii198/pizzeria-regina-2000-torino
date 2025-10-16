@@ -134,28 +134,31 @@ const Hero = () => {
           </video>
         ) : null}
 
-        {/* Fallback to background image if video fails or is loading - Mobile Optimized */}
+        {/* Fallback to background image if video fails or is loading - iOS OPTIMIZED */}
         {(videoError || !videoLoaded) && (
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat
-            /* Mobile-optimized background positioning */
-            sm:bg-cover sm:bg-center
-            md:bg-cover md:bg-center
-            lg:bg-cover lg:bg-center
-            /* Better mobile scaling */
-            bg-fixed sm:bg-scroll
+            /* iOS Safari compatible - NO background-attachment fixed */
             /* Apply mobile-specific CSS class */
             hero-bg-mobile
             "
             style={{
               backgroundImage: `url('${heroContent.backgroundImage}')`,
-              /* Mobile-specific background optimizations */
+              /* iOS-specific background optimizations */
               backgroundSize: 'cover',
               backgroundPosition: 'center center',
-              backgroundAttachment: window.innerWidth < 768 ? 'scroll' : 'fixed',
-              /* Ensure full coverage on mobile */
+              backgroundAttachment: 'scroll', /* CRITICAL: iOS doesn't support 'fixed' */
+              backgroundRepeat: 'no-repeat',
+              /* Ensure full coverage on all devices */
               minHeight: '100vh',
-              minWidth: '100vw'
+              minWidth: '100%',
+              width: '100%',
+              height: '100%',
+              /* iOS performance optimization */
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden',
+              WebkitTransform: 'translateZ(0)',
+              transform: 'translateZ(0)'
             }}
           ></div>
         )}
@@ -225,8 +228,6 @@ const Hero = () => {
           <div
             className="relative animate-fade-in-right animate-stagger-1 hero-image-column"
             style={{
-              display: 'block !important',
-              visibility: 'visible !important',
               opacity: 1,
               position: 'relative',
               zIndex: 25
@@ -235,8 +236,6 @@ const Hero = () => {
             <div
               className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-white via-red-50 to-orange-50 p-8 hover-lift"
               style={{
-                display: 'block !important',
-                visibility: 'visible !important',
                 minHeight: '550px'
               }}
             >
@@ -256,27 +255,31 @@ const Hero = () => {
                   heroImageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{
-                  display: 'block !important',
-                  visibility: 'visible !important',
                   position: 'relative',
                   zIndex: 10,
-                  height: '500px', // Much bigger height for desktop
-                  minHeight: '400px', // Much bigger minimum
-                  maxWidth: '100%'
-                }}
+                  height: '500px',
+                  minHeight: '400px',
+                  maxWidth: '100%',
+                  // @ts-ignore - iOS optimization properties
+                  WebkitBackfaceVisibility: 'hidden',
+                  backfaceVisibility: 'hidden',
+                  WebkitTransform: 'translateZ(0)',
+                  transform: 'translateZ(0)'
+                } as React.CSSProperties}
+                loading="eager"
+                decoding="async"
                 onLoad={(e) => {
                   setHeroImageLoaded(true);
-                  console.log('🍕 [Hero Image] Loaded with computed height:', e.currentTarget.offsetHeight);
-                  console.log('🍕 [Hero Image] Inline styles:', e.currentTarget.style.height);
-                  console.log('🍕 [Hero Image] CSS classes:', e.currentTarget.className);
+                  console.log('🍕 [Hero Image] Loaded successfully');
                 }}
                 onError={(e) => {
                   // Try fallback image
-                  const fallbackImage = 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
+                  const fallbackImage = 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80';
                   if (e.currentTarget.src !== fallbackImage) {
+                    console.log('⚠️ [Hero] Primary image failed, trying fallback');
                     e.currentTarget.src = fallbackImage;
                   } else {
-                    console.warn('⚠️ [Hero] Fallback image also failed, keeping placeholder');
+                    console.warn('⚠️ [Hero] Fallback image also failed');
                     setHeroImageLoaded(false);
                   }
                 }}

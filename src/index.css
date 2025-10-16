@@ -919,13 +919,23 @@
       transform: scale(1.05) !important;
     }
 
-    /* Hero background image mobile optimization */
+    /* Hero background image mobile optimization - iOS COMPATIBLE */
     .hero-bg-mobile {
       background-size: cover !important;
       background-position: center center !important;
-      background-attachment: scroll !important;
+      background-attachment: scroll !important; /* iOS doesn't support 'fixed' */
+      background-repeat: no-repeat !important;
       min-height: 100vh !important;
       min-width: 100vw !important;
+      width: 100% !important;
+      height: 100% !important;
+      /* iOS rendering optimizations */
+      -webkit-backface-visibility: hidden !important;
+      backface-visibility: hidden !important;
+      -webkit-transform: translateZ(0) !important;
+      transform: translateZ(0) !important;
+      /* Force hardware acceleration on iOS */
+      will-change: transform;
     }
 
     /* Prevent video overflow on mobile - but allow content to flow */
