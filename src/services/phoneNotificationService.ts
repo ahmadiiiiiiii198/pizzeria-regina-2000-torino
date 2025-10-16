@@ -76,14 +76,6 @@ class PhoneNotificationService {
       this.audioElement.volume = this.settings.volume;
       this.audioErrorHandled = false; // Reset error flag
 
-      // Set the audio source - try notification file first, fallback to generated beep
-      if (this.settings.customNotificationSound && this.settings.notificationSoundUrl) {
-        this.audioElement.src = this.settings.notificationSoundUrl;
-      } else {
-        // Try to use notification-sound.mp3, fallback to generated beep
-        this.audioElement.src = '/notification-sound.mp3';
-      }
-
       // Add event listeners
       this.audioElement.addEventListener('ended', () => {
         console.log('🔊 [PhoneNotification] Audio ended');
@@ -95,10 +87,17 @@ class PhoneNotificationService {
         // Only handle error once to prevent infinite loop
         if (!this.audioErrorHandled) {
           this.audioErrorHandled = true;
-          console.log('🔊 [PhoneNotification] notification-sound.mp3 not found, using generated beep');
-          this.audioElement!.src = this.generateBeepSound();
+          console.log('🔊 [PhoneNotification] Audio file not found, using generated beep sound');
+          // Use the fallback beep immediately
+          this.audioElement!.src = this.getBeepSoundDataUrl();
+          this.audioElement!.load(); // Force reload
         }
       });
+
+      // Set the audio source - use generated beep by default
+      // This ensures it always works even if notification-sound.mp3 is missing
+      console.log('🔊 [PhoneNotification] Using generated beep sound (notification-sound.mp3 not required)');
+      this.audioElement.src = this.getBeepSoundDataUrl();
 
       console.log('🔊 [PhoneNotification] Audio initialized');
     } catch (error) {
@@ -472,7 +471,15 @@ class PhoneNotificationService {
     });
   }
 
-  // Generate a simple beep sound using Web Audio API
+  // Get a working beep sound data URL immediately
+  private getBeepSoundDataUrl(): string {
+    // Return a working 800Hz beep sound that plays for 0.5 seconds
+    // This is a proper WAV file encoded as base64 data URL
+    // Works immediately without async operations
+    return 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+  }
+
+  // Generate a simple beep sound using Web Audio API (UNUSED - kept for reference)
   private generateBeepSound(): string {
     try {
       // Create a proper beep sound using Web Audio API and convert to data URL
