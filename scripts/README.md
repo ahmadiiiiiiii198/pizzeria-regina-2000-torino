@@ -1,6 +1,20 @@
-# Database Diagnostic Scripts
+# Database Diagnostic & Setup Scripts
 
-This directory contains comprehensive database diagnostic and monitoring scripts for the Pizzeria Regina 2000 Torino project.
+This directory contains comprehensive database diagnostic, monitoring, and Push Notification setup scripts for the Pizzeria Regina 2000 Torino project.
+
+## 🔔 Push Notification Setup Scripts (ES Modules)
+
+### Quick Setup
+```bash
+# Run all setup steps
+npm run setup:all
+
+# Or run individually:
+npm run setup:supabase        # Create database table
+npm run deploy:edge-function  # Deploy Edge Function (with instructions)
+npm run setup:webhook         # Configure webhook (with instructions)
+npm run test:push             # Test the system
+```
 
 ## 🚀 Quick Start
 

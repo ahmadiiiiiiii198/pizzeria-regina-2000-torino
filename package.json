@@ -10,7 +10,12 @@
     "postbuild": "node scripts/verify-build.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:supabase": "node scripts/setup-supabase.mjs",
+    "deploy:edge-function": "node scripts/deploy-edge-function.mjs",
+    "setup:webhook": "node scripts/setup-webhook.mjs",
+    "test:push": "node scripts/test-push-notification.mjs",
+    "setup:all": "npm run setup:supabase && npm run deploy:edge-function && npm run setup:webhook"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
