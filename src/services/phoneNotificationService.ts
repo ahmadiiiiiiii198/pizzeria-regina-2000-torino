@@ -471,12 +471,73 @@ class PhoneNotificationService {
     });
   }
 
-  // Get a working beep sound data URL immediately
+  // Get a professional notification sound (multi-tone like Glovo)
   private getBeepSoundDataUrl(): string {
-    // Return a working 800Hz beep sound that plays for 0.5 seconds
-    // This is a proper WAV file encoded as base64 data URL
-    // Works immediately without async operations
-    return 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    // Generate a professional 3-tone notification sound
+    // Similar to Glovo/Uber Eats style notifications
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const sampleRate = 44100;
+      const duration = 1.2; // 1.2 seconds total
+      const frameCount = Math.floor(sampleRate * duration);
+      const audioBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+      const channelData = audioBuffer.getChannelData(0);
+
+      // Create 3 tones: high-mid-high pattern (attention grabbing!)
+      const tones = [
+        { freq: 900, start: 0, end: 0.25, volume: 0.6 },      // First beep (high)
+        { freq: 750, start: 0.35, end: 0.60, volume: 0.6 },   // Second beep (mid)
+        { freq: 1000, start: 0.70, end: 1.05, volume: 0.7 }   // Third beep (higher, louder)
+      ];
+
+      // Generate each tone
+      for (const tone of tones) {
+        const startSample = Math.floor(tone.start * sampleRate);
+        const endSample = Math.floor(tone.end * sampleRate);
+        
+        for (let i = startSample; i < endSample && i < frameCount; i++) {
+          const t = (i - startSample) / sampleRate;
+          const toneDuration = tone.end - tone.start;
+          
+          // Create smooth envelope (fade in/out)
+          let envelope = 1;
+          const fadeTime = 0.02; // 20ms fade
+          if (t < fadeTime) {
+            envelope = t / fadeTime; // Fade in
+          } else if (t > toneDuration - fadeTime) {
+            envelope = (toneDuration - t) / fadeTime; // Fade out
+          }
+          
+          // Generate sine wave with envelope
+          const sample = Math.sin(2 * Math.PI * tone.freq * t) * tone.volume * envelope;
+          channelData[i] += sample; // Add to existing (for overlaps)
+        }
+      }
+
+      // Normalize to prevent clipping
+      let maxSample = 0;
+      for (let i = 0; i < frameCount; i++) {
+        maxSample = Math.max(maxSample, Math.abs(channelData[i]));
+      }
+      if (maxSample > 0) {
+        for (let i = 0; i < frameCount; i++) {
+          channelData[i] = channelData[i] / maxSample * 0.9; // Normalize to 90%
+        }
+      }
+
+      // Convert to WAV
+      const wavData = this.audioBufferToWav(audioBuffer);
+      const blob = new Blob([wavData], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      
+      console.log('🔊 [PhoneNotification] Generated professional 3-tone notification sound');
+      return url;
+      
+    } catch (error) {
+      console.error('❌ [PhoneNotification] Error generating sound:', error);
+      // Fallback to simple beep
+      return 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+    }
   }
 
   // Generate a simple beep sound using Web Audio API (UNUSED - kept for reference)
