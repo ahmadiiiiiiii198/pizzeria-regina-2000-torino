@@ -1,9 +1,11 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
+import { Helmet } from 'react-helmet';
 import { Pizza, Loader2, ArrowLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OrdersAdmin from '@/components/admin/OrdersAdmin';
 import OrderNotificationSystem from '@/components/OrderNotificationSystem';
 import { MobileBackgroundNotificationManager } from '@/components/MobileBackgroundNotificationManager';
+import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 import OrdiniHeader from '@/components/OrdiniHeader';
 import AuthenticatedAdminWrapper from '@/components/admin/AuthenticatedAdminWrapper';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -19,9 +21,47 @@ const Ordini = () => {
     window.location.href = '/';
   };
 
+  // PWA Setup
+  useEffect(() => {
+    console.log('📱 [PWA] Ordini page loaded - PWA mode');
+    
+    // Add PWA manifest link
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest-ordini.json';
+    document.head.appendChild(manifestLink);
+
+    // Add theme color
+    const themeColor = document.createElement('meta');
+    themeColor.name = 'theme-color';
+    themeColor.content = '#dc2626';
+    document.head.appendChild(themeColor);
+
+    return () => {
+      // Cleanup on unmount
+      if (manifestLink.parentNode) {
+        manifestLink.parentNode.removeChild(manifestLink);
+      }
+      if (themeColor.parentNode) {
+        themeColor.parentNode.removeChild(themeColor);
+      }
+    };
+  }, []);
+
   return (
     <AuthenticatedAdminWrapper title="Gestione Ordini - Pizzeria Regina 2000" showLogout={false}>
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
+    <>
+      {/* PWA Meta Tags */}
+      <Helmet>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Ordini Regina" />
+        <link rel="apple-touch-icon" href="/pizza-icon-192.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="Ordini Regina" />
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50">
       {/* Mobile-Optimized Header */}
       <div className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-40">
         <div className="px-3 sm:px-6 py-3 sm:py-4">
@@ -169,7 +209,11 @@ const Ordini = () => {
       }>
         <OrderNotificationSystem />
       </Suspense>
+
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
+    </>
     </AuthenticatedAdminWrapper>
   );
 };
