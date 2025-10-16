@@ -1,0 +1,45 @@
+🔐 YOUR VAPID KEYS - KEEP THESE SECURE!
+==========================================
+
+⚠️ DO NOT COMMIT THIS FILE TO GIT!
+⚠️ DO NOT SHARE THESE KEYS PUBLICLY!
+
+Generated on: 2025-10-16
+
+---
+
+PUBLIC KEY (for frontend):
+BN6spH9uf8wc-w6fTXpYpg6Vo61Y3_j5e74bN1iwLdzv27tVaeffxd3W9ZbMVyK6LOxayc2CmQbaw5KDax4_Iyw
+
+PRIVATE KEY (for backend - NEVER expose to frontend):
+QJeKYOVZun2DwxTiNJPSNcndCMyyKVXgKmWbq3ovtkA
+
+---
+
+HOW TO USE:
+
+1. Create .env.local file in project root
+2. Copy these keys into it:
+
+VITE_VAPID_PUBLIC_KEY=BN6spH9uf8wc-w6fTXpYpg6Vo61Y3_j5e74bN1iwLdzv27tVaeffxd3W9ZbMVyK6LOxayc2CmQbaw5KDax4_Iyw
+VAPID_PRIVATE_KEY=QJeKYOVZun2DwxTiNJPSNcndCMyyKVXgKmWbq3ovtkA
+
+3. For Supabase Edge Functions, add to Supabase Dashboard:
+   - Go to: Project Settings → Edge Functions → Secrets
+   - Add: VAPID_PUBLIC_KEY = (public key above)
+   - Add: VAPID_PRIVATE_KEY = (private key above)
+
+---
+
+BACKUP COPY (save somewhere safe):
+Public:  BN6spH9uf8wc-w6fTXpYpg6Vo61Y3_j5e74bN1iwLdzv27tVaeffxd3W9ZbMVyK6LOxayc2CmQbaw5KDax4_Iyw
+Private: QJeKYOVZun2DwxTiNJPSNcndCMyyKVXgKmWbq3ovtkA
+
+---
+
+⚠️ SECURITY NOTES:
+- Public key: Safe to use in frontend code
+- Private key: MUST stay on server only
+- Never commit .env.local to git
+- Keep a backup of these keys in a password manager
+- If keys are compromised, regenerate with: npx web-push generate-vapid-keys

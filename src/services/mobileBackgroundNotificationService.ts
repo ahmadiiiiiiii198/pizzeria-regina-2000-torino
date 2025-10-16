@@ -155,17 +155,117 @@ class MobileBackgroundNotificationService {
         
         if (!this.pushSubscription) {
           console.log('📱 [MobileNotification] Creating new push subscription...');
-          // Note: You would need to implement VAPID keys for production
-          // this.pushSubscription = await this.serviceWorkerRegistration.pushManager.subscribe({
-          //   userVisibleOnly: true,
-          //   applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY'
-          // });
+          
+          // Get VAPID public key from environment
+          const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+          
+          if (!vapidPublicKey) {
+            console.error('❌ [MobileNotification] VAPID public key not found in environment');
+            console.log('💡 Please add VITE_VAPID_PUBLIC_KEY to .env.local');
+            return;
+          }
+
+          // Convert VAPID key to Uint8Array
+          const applicationServerKey = this.urlBase64ToUint8Array(vapidPublicKey);
+
+          // Subscribe to push notifications
+          this.pushSubscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+          });
+
+          console.log('✅ [MobileNotification] Push subscription created');
+
+          // Save subscription to Supabase
+          await this.savePushSubscriptionToDatabase(this.pushSubscription);
+        } else {
+          console.log('✅ [MobileNotification] Using existing push subscription');
+          
+          // Update last_used_at in database
+          await this.updatePushSubscriptionInDatabase(this.pushSubscription);
         }
 
         console.log('✅ [MobileNotification] Push notifications initialized');
       }
     } catch (error) {
       console.error('❌ [MobileNotification] Error initializing push notifications:', error);
+    }
+  }
+
+  // Convert VAPID key from base64 to Uint8Array
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  // Save push subscription to Supabase database
+  private async savePushSubscriptionToDatabase(subscription: PushSubscription): Promise<void> {
+    try {
+      const { default: { createClient } } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+
+      const subscriptionJSON = subscription.toJSON();
+      
+      const { data, error } = await supabase
+        .from('push_subscriptions')
+        .insert({
+          endpoint: subscriptionJSON.endpoint,
+          p256dh_key: subscriptionJSON.keys?.p256dh,
+          auth_key: subscriptionJSON.keys?.auth,
+          user_agent: navigator.userAgent
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // If error is unique constraint (subscription already exists), that's ok
+        if (error.code === '23505') {
+          console.log('📱 [MobileNotification] Subscription already exists in database');
+          return;
+        }
+        throw error;
+      }
+
+      console.log('✅ [MobileNotification] Push subscription saved to database:', data.id);
+    } catch (error) {
+      console.error('❌ [MobileNotification] Error saving push subscription:', error);
+    }
+  }
+
+  // Update push subscription last_used_at in database
+  private async updatePushSubscriptionInDatabase(subscription: PushSubscription): Promise<void> {
+    try {
+      const { default: { createClient } } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+
+      const subscriptionJSON = subscription.toJSON();
+      
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('endpoint', subscriptionJSON.endpoint);
+
+      if (error) throw error;
+
+      console.log('✅ [MobileNotification] Push subscription updated in database');
+    } catch (error) {
+      console.error('❌ [MobileNotification] Error updating push subscription:', error);
     }
   }
 

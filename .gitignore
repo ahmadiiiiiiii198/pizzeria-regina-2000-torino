@@ -29,3 +29,4 @@ stripe-keys.env
 configure-stripe-db.js
 *.env.local
 *.env.production
+VAPID_KEYS_SECURE.txt

@@ -80,7 +80,8 @@
     "stripe": "^18.2.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "web-push": "^3.6.7"
   },
   "description": "**Pizzeria Regina 2000 Torino - Authentic Italian Pizza & Restaurant Ecommerce Website**",
   "main": "console-test-script.js",
