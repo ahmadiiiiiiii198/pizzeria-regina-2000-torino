@@ -362,6 +362,27 @@ const OrdersAdmin = () => {
             duration: 5000,
           });
 
+          // Send browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification('🍕 Nuovo Ordine!', {
+              body: `Ordine da ${payload.new.customer_name} - €${payload.new.total_amount?.toFixed(2) || '0.00'}`,
+              icon: '/pizza-icon-192.png',
+              badge: '/pizza-icon-192.png',
+              tag: `order-${payload.new.id}`,
+              requireInteraction: true,
+              vibrate: [300, 100, 300, 100, 300],
+              actions: [
+                { action: 'view', title: 'Visualizza' },
+                { action: 'dismiss', title: 'Chiudi' }
+              ]
+            } as NotificationOptions);
+
+            notification.onclick = () => {
+              window.focus();
+              notification.close();
+            };
+          }
+
           // Trigger audio notification if available
           if ((window as any).audioNotifier) {
             console.log('🔊 Triggering audio notification from OrdersAdmin');

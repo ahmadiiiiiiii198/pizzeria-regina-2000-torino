@@ -6,6 +6,7 @@ import OrdersAdmin from '@/components/admin/OrdersAdmin';
 import OrderNotificationSystem from '@/components/OrderNotificationSystem';
 import { MobileBackgroundNotificationManager } from '@/components/MobileBackgroundNotificationManager';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import NotificationPermissionPrompt from '@/components/NotificationPermissionPrompt';
 import OrdiniHeader from '@/components/OrdiniHeader';
 import AuthenticatedAdminWrapper from '@/components/admin/AuthenticatedAdminWrapper';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
@@ -212,6 +213,9 @@ const Ordini = () => {
 
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
+
+      {/* Notification Permission Prompt */}
+      <NotificationPermissionPrompt />
     </div>
     </>
     </AuthenticatedAdminWrapper>
