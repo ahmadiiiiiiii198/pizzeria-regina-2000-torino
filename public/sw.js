@@ -1,64 +1,37 @@
 /**
- * KILL-SWITCH SERVICE WORKER
- * 
- * This service worker clears all caches and should be unregistered
- * It fixes the issue where old cached assets were being served causing 404 errors
+ * DISABLED SERVICE WORKER
+ * Service worker temporarily disabled to prevent reload loops
+ * Will be re-enabled with proper notification system later
  */
 
-console.log('🚨 KILL-SWITCH SERVICE WORKER ACTIVE');
+console.log('⏸️ Service Worker is currently disabled');
 
-// Install immediately
+// Immediately unregister this service worker
 self.addEventListener('install', (event) => {
-  console.log('🔧 Kill-switch: Installing...');
+  console.log('🛑 Service Worker installing - will self-destruct');
   self.skipWaiting();
 });
 
-// Activate and clear everything
 self.addEventListener('activate', (event) => {
-  console.log('🔧 Kill-switch: Activating...');
+  console.log('🛑 Service Worker activating - cleaning up and unregistering');
   
   event.waitUntil(
     (async () => {
-      try {
-        // Delete ALL caches
-        const cacheNames = await caches.keys();
-        console.log(`🗑️ Deleting ${cacheNames.length} caches:`, cacheNames);
-        
-        await Promise.all(
-          cacheNames.map(async (cacheName) => {
-            await caches.delete(cacheName);
-            console.log(`✅ Deleted: ${cacheName}`);
-          })
-        );
-        
-        console.log('✅ All caches cleared!');
-        
-        // Take control of all pages
-        await self.clients.claim();
-        
-        // Send message to all clients to unregister
-        const clients = await self.clients.matchAll({ type: 'window' });
-        console.log(`📨 Sending unregister message to ${clients.length} client(s)`);
-        
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'CACHE_CLEARED',
-            message: 'All caches cleared. Please reload the page.'
-          });
-        });
-        
-        console.log('✅ Kill-switch complete. Page should reload automatically.');
-      } catch (error) {
-        console.error('❌ Kill-switch error:', error);
-      }
+      // Clear any caches one last time
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      
+      // Take control then tell clients we're done
+      await self.clients.claim();
+      
+      // Unregister ourselves
+      const registrations = await self.registration.unregister();
+      console.log('✅ Service Worker unregistered itself');
     })()
   );
 });
 
-// NO FETCH HANDLER - Don't cache anything, let everything go to network
-self.addEventListener('fetch', (event) => {
-  // Just pass through to network, don't cache
+// No fetch handler - pass everything through
+self.addEventListener('fetch', () => {
   return;
 });
-
-console.log('🚨 Kill-switch Service Worker loaded. Caches will be cleared on activation.');
