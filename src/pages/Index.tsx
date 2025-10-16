@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import ErrorBoundary from '../components/ErrorBoundary';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
@@ -18,6 +18,18 @@ import BusinessHoursBanner from '../components/BusinessHoursBanner';
 
 
 const Index = () => {
+  // Redirect to /ordini if launched from PWA
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isPWA = urlParams.get('source') === 'pwa';
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    
+    if (isPWA || isStandalone) {
+      console.log('📱 [PWA] Redirecting from home to /ordini');
+      window.location.href = '/ordini?source=pwa';
+    }
+  }, []);
+
   return (
     <div className="min-h-screen font-inter overflow-x-hidden">
       <Header />

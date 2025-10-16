@@ -3,12 +3,14 @@
  * Handles offline functionality and notifications for the Orders Management App
  */
 
-const CACHE_NAME = 'ordini-pwa-v1';
+const CACHE_NAME = 'ordini-pwa-v2';
 const OFFLINE_URL = '/ordini';
+const START_URL = '/ordini?source=pwa';
 
 // Assets to cache for offline functionality
 const ASSETS_TO_CACHE = [
   '/ordini',
+  '/ordini?source=pwa',
   '/pizza-icon-192.png',
   '/pizza-icon-512.png',
   '/notification.mp3'
@@ -68,6 +70,14 @@ self.addEventListener('fetch', (event) => {
 
   // Skip Supabase API requests - always go to network
   if (event.request.url.includes('supabase.co')) {
+    return;
+  }
+
+  // CRITICAL: Redirect home page to /ordini when launched from PWA
+  const url = new URL(event.request.url);
+  if (event.request.mode === 'navigate' && url.pathname === '/' && url.searchParams.get('source') === 'pwa') {
+    console.log('🔀 [Ordini SW] Redirecting / to /ordini');
+    event.respondWith(Response.redirect('/ordini?source=pwa', 302));
     return;
   }
 
