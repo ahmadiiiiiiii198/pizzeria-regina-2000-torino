@@ -185,14 +185,99 @@ self.addEventListener('sync', (event) => {
 
 // Periodic background sync (for checking new orders)
 self.addEventListener('periodicsync', (event) => {
-  console.log('⏰ [Ordini SW] Periodic sync triggered');
+  console.log('⏰ [Ordini SW] Periodic sync triggered:', event.tag);
   
-  if (event.tag === 'check-orders') {
-    event.waitUntil(
-      // Check for new orders logic
-      Promise.resolve()
-    );
+  if (event.tag === 'check-new-orders') {
+    event.waitUntil(checkForNewOrders());
   }
 });
 
-console.log('✅ [Ordini SW] Service Worker loaded successfully');
+// One-time background sync
+self.addEventListener('sync', (event) => {
+  console.log('🔄 [Ordini SW] Background sync triggered:', event.tag);
+  
+  if (event.tag === 'check-orders' || event.tag === 'check-orders-immediate') {
+    event.waitUntil(checkForNewOrders());
+  }
+});
+
+// Check for new orders from Supabase
+async function checkForNewOrders() {
+  console.log('🔍 [Ordini SW] Checking for new orders...');
+  
+  try {
+    // Get the last checked timestamp
+    const lastCheck = await getLastCheckTime();
+    const now = new Date().toISOString();
+    
+    // Fetch new orders from Supabase
+    const response = await fetch(
+      `https://sixnfemtvmighstbgrbd.supabase.co/rest/v1/orders?order=created_at.desc&limit=10&created_at=gt.${lastCheck}`,
+      {
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpZaoUhnSyuv_j5mg4I',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpZaoUhnSyuv_j5mg4I'
+        }
+      }
+    );
+    
+    if (response.ok) {
+      const orders = await response.json();
+      console.log(`✅ [Ordini SW] Found ${orders.length} new orders`);
+      
+      // Show notification for each new order
+      for (const order of orders) {
+        await self.registration.showNotification('🍕 Nuovo Ordine!', {
+          body: `Ordine da ${order.customer_name} - €${order.total_amount?.toFixed(2) || '0.00'}`,
+          icon: '/pizza-icon-192.png',
+          badge: '/pizza-icon-192.png',
+          tag: `order-${order.id}`,
+          requireInteraction: true,
+          vibrate: [300, 100, 300, 100, 300],
+          data: {
+            orderId: order.id,
+            url: '/ordini'
+          },
+          actions: [
+            { action: 'view', title: 'Visualizza' },
+            { action: 'dismiss', title: 'Chiudi' }
+          ]
+        });
+      }
+      
+      // Update last check time
+      await setLastCheckTime(now);
+    } else {
+      console.error('❌ [Ordini SW] Failed to fetch orders:', response.status);
+    }
+  } catch (error) {
+    console.error('❌ [Ordini SW] Error checking for orders:', error);
+  }
+}
+
+// Get last check time from IndexedDB
+async function getLastCheckTime() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const response = await cache.match('last-order-check');
+    if (response) {
+      const text = await response.text();
+      return text || new Date(Date.now() - 60000).toISOString(); // Default: 1 minute ago
+    }
+  } catch (error) {
+    console.error('Error getting last check time:', error);
+  }
+  return new Date(Date.now() - 60000).toISOString(); // Default: 1 minute ago
+}
+
+// Save last check time to cache
+async function setLastCheckTime(time) {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put('last-order-check', new Response(time));
+  } catch (error) {
+    console.error('Error saving last check time:', error);
+  }
+}
+
+console.log('✅ [Ordini SW] Service Worker loaded successfully with background sync support');
