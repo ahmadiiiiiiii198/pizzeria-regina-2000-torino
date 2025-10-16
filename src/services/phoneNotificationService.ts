@@ -29,6 +29,7 @@ class PhoneNotificationService {
   private ringCount = 0;
   private ringTimer: NodeJS.Timeout | null = null;
   private stopTimer: NodeJS.Timeout | null = null;
+  private audioErrorHandled = false; // Prevent error handler loops
 
   // Audio Context Keep-Alive System
   private audioContext: AudioContext | null = null;
@@ -73,6 +74,7 @@ class PhoneNotificationService {
       this.audioElement = new Audio();
       this.audioElement.preload = 'auto';
       this.audioElement.volume = this.settings.volume;
+      this.audioErrorHandled = false; // Reset error flag
 
       // Set the audio source - try notification file first, fallback to generated beep
       if (this.settings.customNotificationSound && this.settings.notificationSoundUrl) {
@@ -80,12 +82,6 @@ class PhoneNotificationService {
       } else {
         // Try to use notification-sound.mp3, fallback to generated beep
         this.audioElement.src = '/notification-sound.mp3';
-
-        // Handle load error - fallback to generated beep
-        this.audioElement.onerror = () => {
-          console.log('🔊 [PhoneNotification] notification-sound.mp3 not found, using generated beep');
-          this.audioElement!.src = this.generateBeepSound();
-        };
       }
 
       // Add event listeners
@@ -94,11 +90,14 @@ class PhoneNotificationService {
         this.handleAudioEnded();
       });
 
-      this.audioElement.addEventListener('error', (error) => {
-        console.error('❌ [PhoneNotification] Audio error:', error);
-        // Fallback to generated beep sound
-        this.audioElement.src = this.generateBeepSound();
-        console.log('🔊 [PhoneNotification] Falling back to generated beep sound');
+      // Single error handler to prevent loops
+      this.audioElement.addEventListener('error', () => {
+        // Only handle error once to prevent infinite loop
+        if (!this.audioErrorHandled) {
+          this.audioErrorHandled = true;
+          console.log('🔊 [PhoneNotification] notification-sound.mp3 not found, using generated beep');
+          this.audioElement!.src = this.generateBeepSound();
+        }
       });
 
       console.log('🔊 [PhoneNotification] Audio initialized');
@@ -282,6 +281,7 @@ class PhoneNotificationService {
         : this.generateBeepSound();
         
       if (oldSrc !== newSrc) {
+        this.audioErrorHandled = false; // Reset error flag when source changes
         this.audioElement.src = newSrc;
         console.log('🔊 [PhoneNotification] Audio source updated:', newSrc);
       }

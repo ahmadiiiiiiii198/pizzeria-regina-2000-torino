@@ -30,7 +30,7 @@ interface AnalyticsData {
     customer_name: string;
     total_amount: number;
     created_at: string;
-    order_status: string;
+    status: string;
   }>;
   ordersByHour: Array<{
     hour: number;
@@ -64,37 +64,41 @@ const AnalyticsDashboard = () => {
         .from('orders')
         .select('total_amount')
         .gte('created_at', today.toISOString())
-        .eq('order_status', 'delivered');
+        .eq('status', 'delivered');
 
       // Week's stats
       const { data: weekData } = await supabase
         .from('orders')
         .select('total_amount')
         .gte('created_at', weekAgo.toISOString())
-        .eq('order_status', 'delivered');
+        .eq('status', 'delivered');
 
       // Month's stats
       const { data: monthData } = await supabase
         .from('orders')
         .select('total_amount')
         .gte('created_at', monthAgo.toISOString())
-        .eq('order_status', 'delivered');
+        .eq('status', 'delivered');
 
-      // Top products
-      const { data: topProductsData } = await supabase
+      // Top products - only from delivered orders
+      const { data: topProductsData, error: topProductsError } = await supabase
         .from('order_items')
         .select(`
           product_name,
           quantity,
-          total_price,
-          orders!inner(order_status)
+          price,
+          orders!inner(status)
         `)
-        .eq('orders.order_status', 'delivered');
+        .eq('orders.status', 'delivered');
+      
+      if (topProductsError) {
+        console.error('Error fetching top products:', topProductsError);
+      }
 
       // Recent orders
       const { data: recentOrdersData } = await supabase
         .from('orders')
-        .select('id, customer_name, total_amount, created_at, order_status')
+        .select('id, customer_name, total_amount, created_at, status')
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -120,7 +124,7 @@ const AnalyticsDashboard = () => {
         const existing = productStats.get(item.product_name) || { quantity: 0, revenue: 0 };
         productStats.set(item.product_name, {
           quantity: existing.quantity + item.quantity,
-          revenue: existing.revenue + item.total_price
+          revenue: existing.revenue + (item.price * item.quantity)
         });
       });
 
@@ -276,8 +280,8 @@ const AnalyticsDashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">€{order.total_amount.toFixed(2)}</p>
-                    <p className={`text-sm ${getStatusColor(order.order_status)}`}>
-                      {order.order_status}
+                    <p className={`text-sm ${getStatusColor(order.status)}`}>
+                      {order.status}
                     </p>
                   </div>
                 </div>

@@ -47,14 +47,21 @@
         // Get current page version from meta tag (will be set by build)
         const APP_VERSION = '{{BUILD_VERSION}}'; // This will be replaced during build
         const STORAGE_KEY = 'app_cache_version';
+        const RELOAD_FLAG_KEY = 'app_cache_reload_flag';
+        
+        // Check if we just reloaded to prevent infinite loop
+        const hasReloaded = sessionStorage.getItem(RELOAD_FLAG_KEY);
         
         // Check stored version
         const storedVersion = localStorage.getItem(STORAGE_KEY);
         
-        if (storedVersion && storedVersion !== APP_VERSION) {
+        if (storedVersion && storedVersion !== APP_VERSION && !hasReloaded) {
           console.log('🆕 New version detected!');
           console.log('   Old:', storedVersion);
           console.log('   New:', APP_VERSION);
+          
+          // Set reload flag to prevent infinite loop
+          sessionStorage.setItem(RELOAD_FLAG_KEY, 'true');
           
           // Clear ALL caches
           if ('caches' in window) {
@@ -83,15 +90,20 @@
           // First visit
           localStorage.setItem(STORAGE_KEY, APP_VERSION);
           console.log('✅ Version stored:', APP_VERSION);
+          // Clear reload flag on first visit
+          sessionStorage.removeItem(RELOAD_FLAG_KEY);
         } else {
           console.log('✅ Version up to date:', APP_VERSION);
+          // Clear reload flag if version matches
+          sessionStorage.removeItem(RELOAD_FLAG_KEY);
         }
       })();
     </script>
 
     <!-- Service Worker Registration with Cache Busting -->
     <script>
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+        // Only register service worker in production, not in development
         window.addEventListener('load', () => {
           // Add timestamp to service worker URL to force update
           const swUrl = '/sw.js?v=' + Date.now();
@@ -121,6 +133,8 @@
               console.log('❌ SW registration failed: ', registrationError);
             });
         });
+      } else if (window.location.hostname === 'localhost') {
+        console.log('🔧 Service Worker disabled in development mode');
       }
     </script>
   </head>
