@@ -1,0 +1,10 @@
+@echo off
+echo Updating .env.local with correct keys...
+(
+echo VITE_SUPABASE_URL=https://sixnfemtvmighstbgrbd.supabase.co
+echo VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpZaoUhnSyuv_j5mg4I
+echo.
+echo VITE_VAPID_PUBLIC_KEY=BN6spH9uf8wc-w6fTXpYpg6Vo61Y3_j5e74bN1iwLdzv27tVaeffxd3W9ZbMVyK6LOxayc2CmQbaw5KDax4_Iyw
+echo VAPID_PRIVATE_KEY=QJeKYOVZun2DwxTiNJPSNcndCMyyKVXgKmWbq3ovtkA
+) > .env.local
+echo .env.local updated!
