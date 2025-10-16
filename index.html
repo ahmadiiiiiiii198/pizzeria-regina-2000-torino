@@ -39,102 +39,164 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Pizzeria Regina 2000" />
 
-    <!-- Aggressive Cache Busting - Runs IMMEDIATELY on page load -->
+    <!-- Smart Cache Busting - Runs on page load with loop prevention -->
     <script>
       (function() {
-        console.log('🔄 Cache busting check starting...');
+        'use strict';
         
-        // Get current page version from meta tag (will be set by build)
-        const APP_VERSION = '{{BUILD_VERSION}}'; // This will be replaced during build
-        const STORAGE_KEY = 'app_cache_version';
-        const RELOAD_FLAG_KEY = 'app_cache_reload_flag';
+        // Configuration
+        const APP_VERSION = '{{BUILD_VERSION}}';
+        const STORAGE_KEY = 'pizzeria_app_version';
+        const RELOAD_COUNT_KEY = 'pizzeria_reload_count';
+        const RELOAD_TIMESTAMP_KEY = 'pizzeria_reload_timestamp';
+        const MAX_RELOAD_ATTEMPTS = 2; // Maximum reload attempts to prevent loops
+        const RELOAD_TIMEOUT = 5000; // 5 seconds minimum between reloads
         
-        // Check if we just reloaded to prevent infinite loop
-        const hasReloaded = sessionStorage.getItem(RELOAD_FLAG_KEY);
+        console.log('🚀 Cache busting initialized - Version:', APP_VERSION);
         
-        // Check stored version
-        const storedVersion = localStorage.getItem(STORAGE_KEY);
-        
-        if (storedVersion && storedVersion !== APP_VERSION && !hasReloaded) {
-          console.log('🆕 New version detected!');
-          console.log('   Old:', storedVersion);
-          console.log('   New:', APP_VERSION);
+        // Safety check: prevent rapid consecutive reloads
+        function isReloadSafe() {
+          const lastReload = parseInt(sessionStorage.getItem(RELOAD_TIMESTAMP_KEY) || '0', 10);
+          const timeSinceLastReload = Date.now() - lastReload;
           
-          // Set reload flag to prevent infinite loop
-          sessionStorage.setItem(RELOAD_FLAG_KEY, 'true');
+          if (timeSinceLastReload < RELOAD_TIMEOUT) {
+            console.warn('⚠️ Reload attempted too soon. Skipping to prevent loop.');
+            return false;
+          }
           
-          // Clear ALL caches
+          const reloadCount = parseInt(sessionStorage.getItem(RELOAD_COUNT_KEY) || '0', 10);
+          if (reloadCount >= MAX_RELOAD_ATTEMPTS) {
+            console.warn('⚠️ Max reload attempts reached. Clearing cache manually without reload.');
+            sessionStorage.removeItem(RELOAD_COUNT_KEY);
+            return false;
+          }
+          
+          return true;
+        }
+        
+        // Clear all caches asynchronously
+        async function clearAllCaches() {
+          const promises = [];
+          
+          // Clear Cache Storage
           if ('caches' in window) {
-            caches.keys().then(names => {
-              names.forEach(name => {
-                console.log('🗑️ Deleting cache:', name);
-                caches.delete(name);
-              });
-            });
+            try {
+              const names = await caches.keys();
+              console.log('🗑️ Clearing', names.length, 'cache(s)');
+              promises.push(...names.map(name => caches.delete(name)));
+            } catch (e) {
+              console.error('❌ Cache clearing failed:', e);
+            }
           }
           
           // Unregister service workers
           if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-              registrations.forEach(reg => reg.unregister());
-            });
+            try {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              console.log('🗑️ Unregistering', registrations.length, 'service worker(s)');
+              promises.push(...registrations.map(reg => reg.unregister()));
+            } catch (e) {
+              console.error('❌ Service worker unregister failed:', e);
+            }
           }
           
-          // Store new version
+          await Promise.all(promises);
+          console.log('✅ All caches cleared');
+        }
+        
+        // Perform version check and cache busting
+        async function checkVersion() {
+          const storedVersion = localStorage.getItem(STORAGE_KEY);
+          
+          // First visit - store version and continue
+          if (!storedVersion) {
+            localStorage.setItem(STORAGE_KEY, APP_VERSION);
+            sessionStorage.removeItem(RELOAD_COUNT_KEY);
+            sessionStorage.removeItem(RELOAD_TIMESTAMP_KEY);
+            console.log('✅ First visit - version stored:', APP_VERSION);
+            return;
+          }
+          
+          // Version matches - all good
+          if (storedVersion === APP_VERSION) {
+            sessionStorage.removeItem(RELOAD_COUNT_KEY);
+            sessionStorage.removeItem(RELOAD_TIMESTAMP_KEY);
+            console.log('✅ Version up to date:', APP_VERSION);
+            return;
+          }
+          
+          // New version detected
+          console.log('🆕 Version update detected!');
+          console.log('   Old:', storedVersion);
+          console.log('   New:', APP_VERSION);
+          
+          // Clear caches first
+          await clearAllCaches();
+          
+          // Update stored version
           localStorage.setItem(STORAGE_KEY, APP_VERSION);
           
-          // Force reload from server (bypass cache)
-          console.log('🔄 Forcing hard reload...');
-          window.location.reload(true);
-        } else if (!storedVersion) {
-          // First visit
-          localStorage.setItem(STORAGE_KEY, APP_VERSION);
-          console.log('✅ Version stored:', APP_VERSION);
-          // Clear reload flag on first visit
-          sessionStorage.removeItem(RELOAD_FLAG_KEY);
-        } else {
-          console.log('✅ Version up to date:', APP_VERSION);
-          // Clear reload flag if version matches
-          sessionStorage.removeItem(RELOAD_FLAG_KEY);
+          // Check if reload is safe
+          if (!isReloadSafe()) {
+            console.log('⏩ Skipping reload for safety. Cache cleared, continuing with new version.');
+            sessionStorage.removeItem(RELOAD_COUNT_KEY);
+            return;
+          }
+          
+          // Increment reload counter
+          const currentCount = parseInt(sessionStorage.getItem(RELOAD_COUNT_KEY) || '0', 10);
+          sessionStorage.setItem(RELOAD_COUNT_KEY, String(currentCount + 1));
+          sessionStorage.setItem(RELOAD_TIMESTAMP_KEY, String(Date.now()));
+          
+          // Perform reload
+          console.log('🔄 Reloading page to apply new version...');
+          setTimeout(() => {
+            window.location.href = window.location.href.split('?')[0] + '?v=' + APP_VERSION;
+          }, 100); // Small delay to ensure storage is written
         }
+        
+        // Run version check
+        checkVersion().catch(err => {
+          console.error('❌ Version check failed:', err);
+        });
       })();
     </script>
 
-    <!-- Service Worker Registration with Cache Busting -->
+    <!-- Service Worker Registration (Production Only) -->
     <script>
       if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
-        // Only register service worker in production, not in development
         window.addEventListener('load', () => {
-          // Add timestamp to service worker URL to force update
-          const swUrl = '/sw.js?v=' + Date.now();
-          
-          navigator.serviceWorker.register(swUrl)
+          navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
-              console.log('✅ SW registered: ', registration);
+              console.log('✅ Service Worker registered:', registration.scope);
               
-              // Check for updates every 60 seconds
+              // Check for updates every 5 minutes (less aggressive)
               setInterval(() => {
-                registration.update();
-              }, 60000);
+                registration.update().catch(err => {
+                  console.warn('Service Worker update check failed:', err);
+                });
+              }, 300000); // 5 minutes
               
-              // Handle updates
+              // Handle updates - notify user instead of auto-reload
               registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
+                if (!newWorker) return;
+                
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('🔄 New version available! Refresh to update.');
-                    // Force reload immediately
-                    window.location.reload(true);
+                    console.log('📦 New version available! Page will update on next visit.');
+                    // Let the cache busting system handle the reload
+                    // Don't force reload here to prevent conflicts
                   }
                 });
               });
             })
-            .catch((registrationError) => {
-              console.log('❌ SW registration failed: ', registrationError);
+            .catch((error) => {
+              console.warn('❌ Service Worker registration failed:', error);
             });
         });
       } else if (window.location.hostname === 'localhost') {
-        console.log('🔧 Service Worker disabled in development mode');
+        console.log('🛠️ Development mode - Service Worker disabled');
       }
     </script>
   </head>
@@ -143,6 +205,6 @@
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx?v={{BUILD_VERSION}}"></script>
   </body>
 </html>

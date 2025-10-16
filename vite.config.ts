@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 3000,
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    },
   },
   build: {
     outDir: 'dist',
@@ -24,7 +27,7 @@ export default defineConfig(({ mode }) => ({
         main: path.resolve(__dirname, 'index.html')
       },
       output: {
-        // Content-based hash changes when files change
+        // Content-based hash changes when files change (automatic cache busting)
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
         assetFileNames: 'assets/[name].[hash].[ext]',
