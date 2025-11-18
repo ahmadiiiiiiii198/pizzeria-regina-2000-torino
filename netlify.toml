@@ -1,11 +1,16 @@
 [build]
   publish = "dist"
   command = "rm -rf dist && npm run build"
+  functions = "netlify/functions"
   
 [build.environment]
   NODE_VERSION = "20"
   # Prevent caching issues
   NPM_FLAGS = "--legacy-peer-deps"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 # CRITICAL: Never cache HTML files (especially index.html)
 [[headers]]
