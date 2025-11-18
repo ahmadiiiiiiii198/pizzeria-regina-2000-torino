@@ -75,11 +75,19 @@
     Cache-Control = "public, max-age=604800"
 
 # SPA redirect - this should be LAST
+# Exclude API and function routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
   force = false
+  conditions = {Role = ["!admin"]}
+  
+# Don't redirect function calls
+[[redirects]]
+  from = "/.netlify/*"
+  to = "/.netlify/:splat"
+  status = 200
 
 [dev]
   command = "npm run dev"
