@@ -1,0 +1,13 @@
+# Don't redirect asset files - serve them directly
+/assets/*  /assets/:splat  200
+/sw.js     /sw.js          200
+/manifest.json  /manifest.json  200
+/*.js      /:splat.js      200
+/*.css     /:splat.css     200
+/*.png     /:splat.png     200
+/*.jpg     /:splat.jpg     200
+/*.ico     /:splat.ico     200
+/*.svg     /:splat.svg     200
+
+# Redirect all other routes to index.html for SPA routing
+/*    /index.html   200

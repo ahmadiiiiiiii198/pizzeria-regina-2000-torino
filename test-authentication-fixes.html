@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Performance Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        .warning { background: rgba(255, 152, 0, 0.3); }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #45a049; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .console-monitor {
+            max-height: 400px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Authentication Performance Test</h1>
+    <p>Testing the authentication fixes for loading performance issues</p>
+
+    <div class="test-container">
+        <h2>📊 Performance Metrics</h2>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value" id="authTime">--</div>
+                <div class="metric-label">Auth Init Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="profileTime">--</div>
+                <div class="metric-label">Profile Load Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="appBlockTime">--</div>
+                <div class="metric-label">App Block Time (ms)</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="errorCount">0</div>
+                <div class="metric-label">Auth Errors</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-container">
+        <h2>🧪 Test Results</h2>
+        <div id="results"></div>
+        <button onclick="runAuthTests()">Run Authentication Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-container">
+        <h2>📝 Authentication Console Monitor</h2>
+        <div id="consoleLog" class="console-monitor"></div>
+    </div>
+
+    <script>
+        let startTime = Date.now();
+        let authErrorCount = 0;
+        let authInitTime = null;
+        let profileLoadTime = null;
+        let appBlockTime = null;
+
+        // Override console methods to capture auth-related logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.join(' ');
+            
+            // Capture auth timing
+            if (message.includes('[AUTH-INIT]') && message.includes('completed in')) {
+                const match = message.match(/(\d+)ms/);
+                if (match) {
+                    authInitTime = parseInt(match[1]);
+                    updateMetric('authTime', authInitTime);
+                }
+            }
+            
+            if (message.includes('[Auth]') && message.includes('Profile loaded')) {
+                const match = message.match(/(\d+)ms/);
+                if (match) {
+                    profileLoadTime = parseInt(match[1]);
+                    updateMetric('profileTime', profileLoadTime);
+                }
+            }
+            
+            if (message.includes('AUTH') || message.includes('Auth') || message.includes('USER-ORDERS')) {
+                logToMonitor('LOG', message);
+            }
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            const message = args.join(' ');
+            
+            if (message.includes('AUTH') || message.includes('Auth') || message.includes('user_profiles')) {
+                authErrorCount++;
+                updateMetric('errorCount', authErrorCount);
+                logToMonitor('ERROR', message);
+            }
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            const message = args.join(' ');
+            
+            if (message.includes('AUTH') || message.includes('Auth') || message.includes('user_profiles')) {
+                logToMonitor('WARN', message);
+            }
+        };
+
+        function logToMonitor(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('consoleLog');
+            const color = type === 'ERROR' ? '#ff6b6b' : type === 'WARN' ? '#ffa726' : '#4fc3f7';
+            
+            logElement.innerHTML += `<div style="color: ${color}; margin: 2px 0;">[${timestamp}] ${type}: ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateMetric(id, value) {
+            document.getElementById(id).textContent = value;
+        }
+
+        function addResult(type, message) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('consoleLog').innerHTML = '';
+            authErrorCount = 0;
+            updateMetric('errorCount', 0);
+        }
+
+        async function runAuthTests() {
+            clearResults();
+            addResult('info', '🔐 Starting authentication performance tests...');
+
+            // Test 1: Check if app is blocked by authentication
+            const pageLoadTime = Date.now() - startTime;
+            updateMetric('appBlockTime', pageLoadTime);
+            
+            if (pageLoadTime < 1000) {
+                addResult('success', `✅ App loaded without auth blocking in ${pageLoadTime}ms (Excellent)`);
+            } else if (pageLoadTime < 3000) {
+                addResult('warning', `⚠️ App loaded in ${pageLoadTime}ms (Acceptable)`);
+            } else {
+                addResult('error', `❌ App blocked by auth for ${pageLoadTime}ms (Too slow)`);
+            }
+
+            // Test 2: Check authentication initialization time
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            if (authInitTime !== null) {
+                if (authInitTime < 1000) {
+                    addResult('success', `✅ Authentication initialized in ${authInitTime}ms (Fast)`);
+                } else if (authInitTime < 3000) {
+                    addResult('warning', `⚠️ Authentication initialized in ${authInitTime}ms (Acceptable)`);
+                } else {
+                    addResult('error', `❌ Authentication took ${authInitTime}ms (Slow)`);
+                }
+            } else {
+                addResult('warning', '⚠️ Authentication timing not captured');
+            }
+
+            // Test 3: Check profile loading time
+            if (profileLoadTime !== null) {
+                if (profileLoadTime < 500) {
+                    addResult('success', `✅ Profile loaded in ${profileLoadTime}ms (Fast)`);
+                } else if (profileLoadTime < 2000) {
+                    addResult('warning', `⚠️ Profile loaded in ${profileLoadTime}ms (Acceptable)`);
+                } else {
+                    addResult('error', `❌ Profile loading took ${profileLoadTime}ms (Slow)`);
+                }
+            } else {
+                addResult('info', 'ℹ️ Profile loading not detected (user not authenticated)');
+            }
+
+            // Test 4: Check for authentication errors
+            if (authErrorCount === 0) {
+                addResult('success', '✅ No authentication errors detected');
+            } else {
+                addResult('error', `❌ Found ${authErrorCount} authentication errors`);
+            }
+
+            // Test 5: Test page responsiveness
+            addResult('info', '🧪 Testing page responsiveness...');
+            const responseStart = Date.now();
+            
+            try {
+                // Simulate user interaction
+                document.body.click();
+                const responseTime = Date.now() - responseStart;
+                
+                if (responseTime < 100) {
+                    addResult('success', `✅ Page responds in ${responseTime}ms (Excellent)`);
+                } else if (responseTime < 300) {
+                    addResult('warning', `⚠️ Page responds in ${responseTime}ms (Good)`);
+                } else {
+                    addResult('error', `❌ Page responds in ${responseTime}ms (Slow)`);
+                }
+            } catch (error) {
+                addResult('error', `❌ Responsiveness test failed: ${error.message}`);
+            }
+
+            addResult('info', '🏁 Authentication performance tests completed!');
+        }
+
+        // Initialize metrics
+        window.addEventListener('load', () => {
+            const loadTime = Date.now() - startTime;
+            updateMetric('appBlockTime', loadTime);
+            
+            // Auto-run tests after 3 seconds
+            setTimeout(runAuthTests, 3000);
+        });
+
+        // Monitor for specific authentication patterns
+        window.addEventListener('error', (event) => {
+            if (event.message.includes('user_profiles') || event.message.includes('auth')) {
+                addResult('error', `❌ Critical auth error: ${event.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

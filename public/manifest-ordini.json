@@ -1,0 +1,64 @@
+{
+  "name": "Pizzeria Regina 2000 - Gestione Ordini",
+  "short_name": "Ordini Regina",
+  "description": "Sistema di gestione ordini per Pizzeria Regina 2000 - App mobile standalone",
+  "start_url": "/ordini?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#dc2626",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/pizza-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pizza-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "food", "productivity"],
+  "screenshots": [
+    {
+      "src": "/ordini-screenshot-mobile.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ordini Attivi",
+      "short_name": "Attivi",
+      "description": "Visualizza ordini attivi",
+      "url": "/ordini?filter=active",
+      "icons": [
+        {
+          "src": "/pizza-icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Nuovi Ordini",
+      "short_name": "Nuovi",
+      "description": "Visualizza nuovi ordini",
+      "url": "/ordini?filter=confirmed",
+      "icons": [
+        {
+          "src": "/pizza-icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "dir": "ltr",
+  "lang": "it-IT"
+}

@@ -1,0 +1,107 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pizzeria Regina 2000 Torino - Authentic Italian Pizza & Restaurant</title>
+    <meta name="description" content="Authentic Italian pizza and traditional cuisine in the heart of Torino. Order online for delivery or takeaway." />
+    <meta name="author" content="Pizzeria Regina 2000 Torino" />
+    
+    <!-- Cache Busting - Force fresh content -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="shortcut icon" type="image/png" href="/logo.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <meta property="og:title" content="Pizzeria Regina 2000 Torino" />
+    <meta property="og:description" content="Authentic Italian pizza and traditional cuisine in the heart of Torino. Order online for delivery or takeaway." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/pizzeria-regina-logo.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@lovable_dev" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Pizzeria Regina 2000" />
+
+    <!-- Smart Cache Busting (Netlify-optimized) -->
+    <script>
+      (function() {
+        'use strict';
+        
+        const APP_VERSION = '{{BUILD_VERSION}}';
+        const STORAGE_KEY = 'pizzeria_app_version';
+        
+        console.log('🚀 App Version:', APP_VERSION);
+        
+        // Simple version tracking for Netlify deployments
+        const storedVersion = localStorage.getItem(STORAGE_KEY);
+        
+        if (!storedVersion) {
+          // First visit
+          localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          console.log('✅ First visit - version stored');
+        } else if (storedVersion !== APP_VERSION) {
+          // Version changed - clear caches (Netlify headers prevent HTML caching)
+          console.log('🆕 New version detected:', storedVersion, '→', APP_VERSION);
+          
+          // Clear service worker caches
+          if ('caches' in window) {
+            caches.keys().then(keys => {
+              keys.forEach(key => caches.delete(key));
+              console.log('✅ Cleared', keys.length, 'cache(s)');
+            });
+          }
+          
+          // Update version
+          localStorage.setItem(STORAGE_KEY, APP_VERSION);
+          console.log('✅ Version updated - refresh complete');
+        } else {
+          console.log('✅ Version current');
+        }
+      })();
+    </script>
+
+    <!-- Service Worker Handler (DISABLED to prevent reload loops) -->
+    <script>
+      // TEMPORARILY DISABLED - Service worker was causing reload loops
+      // Will re-enable after fixing the kill-switch logic
+      console.log('ℹ️ Service Worker temporarily disabled to prevent reload loops');
+      
+      // Clean up any existing service workers to stop the loop
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          if (registrations.length > 0) {
+            console.log('🧹 Cleaning up existing service workers...');
+            registrations.forEach(reg => {
+              reg.unregister();
+              console.log('✅ Unregistered:', reg.scope);
+            });
+          }
+        });
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx?v={{BUILD_VERSION}}"></script>
+  </body>
+</html>

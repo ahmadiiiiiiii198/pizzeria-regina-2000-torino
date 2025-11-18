@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Business Hours</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .debug-box {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .open { background: #d4edda; color: #155724; }
+        .closed { background: #f8d7da; color: #721c24; }
+        .loading { background: #fff3cd; color: #856404; }
+        .error { background: #f8d7da; color: #721c24; }
+        .time-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .hours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .day-hours {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .day-hours.today {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .day-hours.closed-day {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕒 Debug Business Hours - Pizzeria Regina 2000</h1>
+    
+    <div class="debug-box">
+        <h2>Current Time Information</h2>
+        <div class="time-info">
+            <div><strong>Current Time:</strong> <span id="current-time">Loading...</span></div>
+            <div><strong>Current Day:</strong> <span id="current-day">Loading...</span></div>
+            <div><strong>Timezone:</strong> <span id="timezone">Loading...</span></div>
+        </div>
+    </div>
+
+    <div class="debug-box">
+        <h2>Business Status</h2>
+        <div id="status" class="status loading">🔄 Loading business hours...</div>
+        <div id="details"></div>
+    </div>
+
+    <div class="debug-box">
+        <h2>Weekly Hours</h2>
+        <div id="hours-display" class="hours-grid">Loading...</div>
+    </div>
+
+    <div class="debug-box">
+        <h2>Debug Information</h2>
+        <div id="debug-info">
+            <pre id="debug-log"></pre>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://sixnfemtvmighstbgrbd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY3NzE5NzQsImV4cCI6MjA1MjM0Nzk3NH0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8';
+
+        let businessHours = null;
+        let debugLog = [];
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString('it-IT');
+            const logEntry = `[${timestamp}] ${message}`;
+            debugLog.push(logEntry);
+            console.log(logEntry);
+            document.getElementById('debug-log').textContent = debugLog.join('\n');
+        }
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('it-IT');
+            document.getElementById('current-day').textContent = dayNames[now.getDay()];
+            document.getElementById('timezone').textContent = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        }
+
+        async function fetchBusinessHours() {
+            try {
+                log('🔄 Fetching business hours from Supabase...');
+                
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/settings?key=eq.businessHours&select=value`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                log(`✅ Raw response: ${JSON.stringify(data)}`);
+
+                if (data && data.length > 0 && data[0].value) {
+                    businessHours = data[0].value;
+                    log(`✅ Business hours loaded: ${JSON.stringify(businessHours)}`);
+                    return businessHours;
+                } else {
+                    throw new Error('No business hours data found');
+                }
+            } catch (error) {
+                log(`❌ Error fetching business hours: ${error.message}`);
+                throw error;
+            }
+        }
+
+        function isTimeWithinRange(currentTime, openTime, closeTime) {
+            const timeToMinutes = (timeString) => {
+                const [hours, minutes] = timeString.split(':').map(Number);
+                return hours * 60 + minutes;
+            };
+
+            const current = timeToMinutes(currentTime);
+            const open = timeToMinutes(openTime);
+            const close = timeToMinutes(closeTime);
+            
+            log(`🕒 Time comparison: Current=${currentTime}(${current}min), Open=${openTime}(${open}min), Close=${closeTime}(${close}min)`);
+            
+            // Handle overnight hours (e.g., 22:00 - 02:00)
+            if (close < open) {
+                const result = current >= open || current <= close;
+                log(`🌙 Overnight hours detected: ${result}`);
+                return result;
+            }
+            
+            const result = current >= open && current <= close;
+            log(`☀️ Regular hours: ${result}`);
+            return result;
+        }
+
+        function checkBusinessStatus() {
+            if (!businessHours) {
+                log('❌ No business hours available for status check');
+                return;
+            }
+
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const currentDay = dayNames[dayOfWeek];
+            const todayHours = businessHours[currentDay];
+
+            const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+            
+            log(`📅 Today is ${currentDay}, hours: ${JSON.stringify(todayHours)}`);
+            log(`🕒 Current time: ${currentTime}`);
+
+            const statusDiv = document.getElementById('status');
+            const detailsDiv = document.getElementById('details');
+
+            if (!todayHours.isOpen) {
+                statusDiv.className = 'status closed';
+                statusDiv.textContent = '🔴 CHIUSO - Oggi non siamo aperti';
+                detailsDiv.innerHTML = `<p>Il ristorante è chiuso oggi (${currentDay})</p>`;
+                log('🚫 Business is closed today');
+                return;
+            }
+
+            const isOpen = isTimeWithinRange(currentTime, todayHours.openTime, todayHours.closeTime);
+
+            if (isOpen) {
+                statusDiv.className = 'status open';
+                statusDiv.textContent = `🟢 APERTO - Orari di oggi: ${todayHours.openTime}-${todayHours.closeTime}`;
+                detailsDiv.innerHTML = `
+                    <p><strong>Siamo aperti!</strong> Puoi effettuare il tuo ordine.</p>
+                    <p>Orario di chiusura: ${todayHours.closeTime}</p>
+                `;
+                log('✅ Business is OPEN');
+            } else {
+                statusDiv.className = 'status closed';
+                statusDiv.textContent = `🔴 CHIUSO - Orari di oggi: ${todayHours.openTime}-${todayHours.closeTime}`;
+                detailsDiv.innerHTML = `
+                    <p><strong>Siamo chiusi.</strong> Gli ordini possono essere effettuati durante gli orari di apertura.</p>
+                    <p>Prossima apertura: ${todayHours.openTime}</p>
+                `;
+                log('❌ Business is CLOSED');
+            }
+        }
+
+        function displayWeeklyHours() {
+            if (!businessHours) return;
+
+            const hoursDiv = document.getElementById('hours-display');
+            const dayNames = {
+                monday: 'Lunedì',
+                tuesday: 'Martedì', 
+                wednesday: 'Mercoledì',
+                thursday: 'Giovedì',
+                friday: 'Venerdì',
+                saturday: 'Sabato',
+                sunday: 'Domenica'
+            };
+
+            const today = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+
+            let html = '';
+            Object.entries(businessHours).forEach(([day, hours]) => {
+                const isToday = day === today;
+                const isClosed = !hours.isOpen;
+                const cssClass = isToday ? 'today' : (isClosed ? 'closed-day' : '');
+                
+                html += `
+                    <div class="day-hours ${cssClass}">
+                        <strong>${dayNames[day]}${isToday ? ' (Oggi)' : ''}</strong><br>
+                        ${hours.isOpen ? `${hours.openTime} - ${hours.closeTime}` : 'Chiuso'}
+                    </div>
+                `;
+            });
+
+            hoursDiv.innerHTML = html;
+        }
+
+        async function init() {
+            log('🚀 Initializing business hours debug...');
+            
+            // Update current time every second
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+
+            try {
+                await fetchBusinessHours();
+                displayWeeklyHours();
+                checkBusinessStatus();
+                
+                // Check status every 30 seconds
+                setInterval(checkBusinessStatus, 30000);
+                
+                log('✅ Debug initialization complete');
+            } catch (error) {
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = '❌ Errore nel caricamento degli orari';
+                document.getElementById('details').innerHTML = `<p>Errore: ${error.message}</p>`;
+                log(`❌ Initialization failed: ${error.message}`);
+            }
+        }
+
+        // Start the debug tool
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Database Connection Test</h1>
+    
+    <div class="container">
+        <h2>📊 Connection Status</h2>
+        <div id="status" class="status">Testing...</div>
+        
+        <button onclick="testConnection()">🔄 Test Connection</button>
+        <button onclick="testProducts()">🍕 Test Products Query</button>
+        <button onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <div class="container">
+        <h2>📋 Test Results</h2>
+        <div id="log" class="log">Starting database connection test...\n</div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+
+        const SUPABASE_URL = 'https://sixnfemtvmighstbgrbd.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I';
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString('it-IT');
+            const logElement = document.getElementById('log');
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        async function testConnection() {
+            try {
+                log('🔍 Testing basic Supabase connection...');
+                
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('count')
+                    .limit(1);
+
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ Basic connection successful');
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').textContent = '✅ Database connection working';
+                return true;
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`);
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = `❌ Connection failed: ${error.message}`;
+                return false;
+            }
+        }
+
+        async function testProducts() {
+            try {
+                log('🍕 Testing products query (same as Products component)...');
+
+                const { data: productsData, error } = await supabase
+                    .from('products')
+                    .select(`
+                        *,
+                        categories (
+                            name,
+                            slug
+                        )
+                    `)
+                    .eq('is_active', true)
+                    .order('name', { ascending: true });
+
+                if (error) {
+                    throw error;
+                }
+
+                log(`✅ Products query successful - found ${productsData.length} products`);
+                
+                // Group products by category
+                const groupedProducts = {};
+                productsData.forEach((product) => {
+                    const categorySlug = product.categories?.slug || 'uncategorized';
+                    if (!groupedProducts[categorySlug]) {
+                        groupedProducts[categorySlug] = [];
+                    }
+                    groupedProducts[categorySlug].push(product);
+                });
+
+                log(`📊 Products grouped into ${Object.keys(groupedProducts).length} categories:`);
+                Object.entries(groupedProducts).forEach(([slug, products]) => {
+                    log(`   - ${slug}: ${products.length} products`);
+                });
+
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').textContent = '✅ Products query working perfectly';
+                return true;
+            } catch (error) {
+                log(`❌ Products query failed: ${error.message}`);
+                log(`❌ Error details: ${JSON.stringify(error, null, 2)}`);
+                document.getElementById('status').className = 'status error';
+                document.getElementById('status').textContent = `❌ Products query failed: ${error.message}`;
+                return false;
+            }
+        }
+
+        // Make functions available globally
+        window.testConnection = testConnection;
+        window.testProducts = testProducts;
+        window.clearLog = clearLog;
+
+        // Auto-run basic connection test
+        setTimeout(() => {
+            log('🚀 Auto-running connection test...');
+            testConnection();
+        }, 1000);
+    </script>
+</body>
+</html>

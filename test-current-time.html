@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Current Time Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .time-box { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .highlight { background: yellow; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Current Time Analysis</h1>
+    
+    <div class="time-box">
+        <h3>Current Time Information</h3>
+        <div id="time-info"></div>
+    </div>
+
+    <div class="time-box">
+        <h3>Business Hours Test</h3>
+        <div id="business-test"></div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            
+            // Different time formats
+            const timeInfo = `
+                <strong>Full Date:</strong> ${now.toString()}<br>
+                <strong>ISO String:</strong> ${now.toISOString()}<br>
+                <strong>Locale String (IT):</strong> ${now.toLocaleString('it-IT')}<br>
+                <strong>Time String:</strong> ${now.toTimeString()}<br>
+                <strong>Time String (first 5 chars):</strong> <span class="highlight">${now.toTimeString().slice(0, 5)}</span><br>
+                <strong>Locale Time (IT):</strong> ${now.toLocaleTimeString('it-IT')}<br>
+                <strong>Timezone:</strong> ${Intl.DateTimeFormat().resolvedOptions().timeZone}<br>
+                <strong>Timezone Offset:</strong> ${now.getTimezoneOffset()} minutes<br>
+                <strong>Day of Week:</strong> ${now.getDay()} (0=Sunday, 1=Monday, etc.)
+            `;
+            
+            document.getElementById('time-info').innerHTML = timeInfo;
+            
+            // Business hours test
+            const currentTime = now.toTimeString().slice(0, 5);
+            const openTime = "18:30";
+            const closeTime = "22:30";
+            
+            const timeToMinutes = (timeString) => {
+                const [hours, minutes] = timeString.split(':').map(Number);
+                return hours * 60 + minutes;
+            };
+            
+            const current = timeToMinutes(currentTime);
+            const open = timeToMinutes(openTime);
+            const close = timeToMinutes(closeTime);
+            
+            const isOpen = current >= open && current <= close;
+            
+            const businessTest = `
+                <strong>Current Time:</strong> <span class="highlight">${currentTime}</span> (${current} minutes)<br>
+                <strong>Open Time:</strong> ${openTime} (${open} minutes)<br>
+                <strong>Close Time:</strong> ${closeTime} (${close} minutes)<br>
+                <strong>Is Within Range:</strong> <span class="highlight" style="color: ${isOpen ? 'green' : 'red'}">${isOpen ? 'YES - OPEN' : 'NO - CLOSED'}</span><br>
+                <strong>Logic:</strong> ${current} >= ${open} && ${current} <= ${close} = ${isOpen}
+            `;
+            
+            document.getElementById('business-test').innerHTML = businessTest;
+        }
+        
+        // Update every second
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
