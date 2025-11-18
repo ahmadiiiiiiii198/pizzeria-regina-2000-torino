@@ -20,6 +20,8 @@ interface Order {
   customer_phone: string | null;
   total_amount: number;
   status: string;
+  payment_status?: string;
+  payment_method?: string;
   created_at: string;
   updated_at: string;
   tracking_number: string | null;
@@ -319,6 +321,25 @@ const OrderDetails = ({ order, onUpdate, onDelete }: OrderDetailsProps) => {
               <strong className="text-gray-700">Importo Totale:</strong>
               <span className="text-lg sm:text-xl font-bold text-emerald-700">€{(Number(order.total_amount) || 0).toFixed(2)}</span>
             </div>
+            {order.payment_method && (
+              <div>
+                <strong className="text-gray-700">Metodo di Pagamento:</strong>{' '}
+                <span className="text-gray-800 font-medium">
+                  {order.payment_method === 'stripe' && 'Pagato con Carta'}
+                  {order.payment_method === 'cash_on_delivery' && 'Contanti alla Consegna'}
+                  {order.payment_method === 'card' && 'Pagato con Carta'}
+                  {!['stripe', 'cash_on_delivery', 'card'].includes(order.payment_method) && order.payment_method}
+                </span>
+              </div>
+            )}
+            {order.payment_status && (
+              <div>
+                <strong className="text-gray-700">Stato Pagamento:</strong>{' '}
+                <Badge variant={order.payment_status === 'paid' ? 'default' : 'outline'} className="ml-2">
+                  {order.payment_status === 'paid' ? 'Pagato' : order.payment_status === 'pending' ? 'In Attesa' : 'Non Pagato'}
+                </Badge>
+              </div>
+            )}
             <div className="break-words"><strong className="text-gray-700">Creato:</strong> <span className="text-gray-800">{formatDate(order.created_at)}</span></div>
             <div className="break-words"><strong className="text-gray-700">Ultimo Aggiornamento:</strong> <span className="text-gray-800">{formatDate(order.updated_at)}</span></div>
             {order.tracking_number && (

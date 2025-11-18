@@ -1316,6 +1316,19 @@ const OrderDashboardPro: React.FC = () => {
                                     Pagamento: {order.payment_status}
                                   </span>
                                 </div>
+                                {order.payment_method && (
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-100 rounded-lg">
+                                      <CreditCard className="w-4 h-4 text-green-700" />
+                                    </div>
+                                    <span className="text-gray-700 text-sm font-medium">
+                                      {order.payment_method === 'stripe' && 'Pagato con Carta'}
+                                      {order.payment_method === 'cash_on_delivery' && 'Contanti alla Consegna'}
+                                      {order.payment_method === 'card' && 'Pagato con Carta'}
+                                      {!['stripe', 'cash_on_delivery', 'card'].includes(order.payment_method) && order.payment_method}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
