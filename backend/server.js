@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,8 +19,146 @@ const PORT = 3003;
 // Initialize Stripe with secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 // Middleware
 app.use(cors());
+
+// Webhook endpoint needs raw body for signature verification
+app.post('/stripe-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['stripe-signature'];
+
+  try {
+    console.log('🎯 Webhook received!');
+
+    // Get webhook secret from database
+    const { data: setting, error: settingError } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'stripe_webhook_secret')
+      .single();
+
+    if (settingError || !setting) {
+      console.error('❌ Webhook secret not found in database');
+      return res.status(500).json({ error: 'Webhook secret not configured' });
+    }
+
+    const webhookSecret = setting.value;
+    console.log('✅ Webhook secret loaded from database');
+
+    // Verify webhook signature
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+      console.log('✅ Webhook verified:', event.type);
+    } catch (err) {
+      console.error('❌ Webhook signature verification failed:', err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+
+    // Handle checkout.session.completed
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      console.log('💳 Processing completed checkout session:', session.id);
+
+      const metadata = session.metadata;
+      if (!metadata || !metadata.order_items) {
+        console.error('❌ No metadata in session');
+        return res.json({ received: true, message: 'No order data' });
+      }
+
+      // Parse order data
+      const orderItems = JSON.parse(metadata.order_items);
+      const coordinates = JSON.parse(metadata.coordinates || '{}');
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          order_number: metadata.order_number,
+          customer_name: metadata.customer_name,
+          customer_email: metadata.customer_email,
+          customer_phone: metadata.customer_phone,
+          customer_address: metadata.customer_address,
+          delivery_type: metadata.delivery_type,
+          delivery_fee: parseFloat(metadata.delivery_fee || '0'),
+          total_amount: parseFloat(metadata.total_amount || '0'),
+          payment_status: 'paid',
+          payment_method: metadata.payment_method,
+          stripe_session_id: session.id,
+          stripe_payment_intent_id: session.payment_intent,
+          paid_amount: (session.amount_total || 0) / 100,
+          paid_at: new Date().toISOString(),
+          user_id: metadata.user_id !== 'null' ? metadata.user_id : null,
+          metadata: {
+            clientId: metadata.clientId,
+            deviceFingerprint: metadata.deviceFingerprint,
+            sessionId: metadata.sessionId,
+            orderCreatedAt: new Date().toISOString(),
+            isAuthenticatedOrder: metadata.isAuthenticatedOrder === 'true',
+            deliveryFee: parseFloat(metadata.delivery_fee || '0'),
+            coordinates: coordinates,
+            formattedAddress: metadata.formattedAddress,
+            stripeOrderCompleted: true,
+          },
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('❌ Error creating order:', orderError);
+        return res.status(500).json({ error: 'Order creation failed' });
+      }
+
+      console.log('✅ Order created:', order.id);
+
+      // Create order items
+      const orderItemsToInsert = orderItems.map((item) => ({
+        order_id: order.id,
+        product_id: item.product_id,
+        product_name: item.product_name,
+        product_price: item.product_price,
+        quantity: item.quantity,
+        subtotal: item.subtotal,
+        unit_price: item.unit_price,
+        special_requests: item.special_requests,
+        toppings: item.toppings,
+        metadata: {
+          extras: item.extras,
+          base_price: item.base_price,
+          extras_price: item.extras_price,
+        },
+      }));
+
+      await supabase.from('order_items').insert(orderItemsToInsert);
+      console.log('✅ Order items created');
+
+      // Create notification
+      await supabase.from('order_notifications').insert({
+        order_id: order.id,
+        notification_type: 'new_order',
+        title: 'Nuovo Ordine Pagato!',
+        message: `New PAID order from ${metadata.customer_name} - €${metadata.total_amount}`,
+        is_read: false,
+        is_acknowledged: false,
+      });
+
+      console.log('✅ Notification created');
+      console.log('🎉 Order processing complete!');
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('❌ Webhook error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// All other routes use JSON middleware
 app.use(express.json());
 
 // Health check endpoint
