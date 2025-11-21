@@ -1,3 +1,8 @@
+// ═══════════════════════════════════════════════════════════════════════
+// READY TO PASTE - Stripe Webhook Edge Function
+// This connects to your ORIGINAL database while running on NEW project
+// ═══════════════════════════════════════════════════════════════════════
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.21.0'
@@ -14,69 +19,105 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🎯 Webhook received!')
+
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     })
 
-    // Initialize Supabase client
+    // ⚠️ IMPORTANT: Connect to ORIGINAL database (not this project's database)
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      Deno.env.get('ORIGINAL_SUPABASE_URL') || 'https://sixnfemtvmighstbgrbd.supabase.co',
+      Deno.env.get('ORIGINAL_SERVICE_ROLE_KEY') || ''
     )
+    
+    console.log('✅ Connected to original database')
 
     const signature = req.headers.get('stripe-signature')
     const body = await req.text()
     
-    // Try to get webhook secret from environment first, then from database
-    let webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+    // Get webhook secret from environment variable
+    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
     
     if (!webhookSecret) {
-      console.log('No env var found, reading webhook secret from database...')
-      const { data: setting, error: settingError } = await supabaseClient
-        .from('settings')
-        .select('value')
-        .eq('key', 'stripe_webhook_secret')
-        .single()
-      
-      if (settingError || !setting) {
-        throw new Error('Webhook secret not found in environment or database')
-      }
-      
-      webhookSecret = setting.value
-      console.log('✅ Webhook secret loaded from database')
+      console.error('❌ STRIPE_WEBHOOK_SECRET not found in environment')
+      throw new Error('Webhook secret not configured')
     }
+    
+    console.log('✅ Webhook secret loaded from environment')
 
-    if (!signature || !webhookSecret) {
-      throw new Error('Missing stripe signature or webhook secret')
+    if (!signature) {
+      throw new Error('Missing stripe signature')
     }
 
     // Verify the webhook signature
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
 
-    console.log('Received Stripe webhook:', event.type)
+    console.log('✅ Webhook verified! Event type:', event.type)
 
     // Handle the event
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        console.log('✅ Checkout session completed:', session.id)
-        console.log('📦 Creating order from session metadata...')
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object
+      console.log('💳 Checkout session completed:', session.id)
+      console.log('📦 Creating order from session metadata...')
 
-        // 🔒 CRITICAL: CREATE ORDER NOW (after payment confirmed)
-        // All order data is in session metadata
-        const metadata = session.metadata
-        if (!metadata) {
-          console.error('❌ No metadata in session')
-          break
+      const metadata = session.metadata
+      if (!metadata) {
+        console.error('❌ No metadata in session')
+        return new Response(JSON.stringify({ received: true, message: 'No metadata' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
+
+      const orderNumber = metadata.order_number
+      console.log(`🔍 Looking for existing order: ${orderNumber}`)
+
+      // Find existing order by order_number
+      const { data: existingOrder, error: findError } = await supabaseClient
+        .from('orders')
+        .select('id')
+        .eq('order_number', orderNumber)
+        .single()
+
+      let order
+
+      if (existingOrder && !findError) {
+        // UPDATE existing order
+        console.log('✅ Found existing order:', existingOrder.id)
+        console.log('🔧 Updating to CONFIRMED and PAID...')
+        
+        const { data: updatedOrder, error: updateError } = await supabaseClient
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            status: 'confirmed',
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent,
+            paid_amount: (session.amount_total || 0) / 100,
+            paid_at: new Date().toISOString(),
+          })
+          .eq('id', existingOrder.id)
+          .select()
+          .single()
+
+        if (updateError) {
+          console.error('❌ Error updating order:', updateError)
+          throw new Error(`Order update failed: ${updateError.message}`)
         }
 
-        // Parse order items from metadata
+        order = updatedOrder
+        console.log('✅ Order updated to CONFIRMED! ID:', order.id)
+
+      } else {
+        // FALLBACK: Create new order if not found
+        console.log('⚠️ Existing order not found, creating new one...')
+        
         const orderItems = JSON.parse(metadata.order_items || '[]')
         const coordinates = JSON.parse(metadata.coordinates || '{}')
 
-        // Create order in database
-        const { data: order, error: orderError } = await supabaseClient
+        const { data: newOrder, error: orderError } = await supabaseClient
           .from('orders')
           .insert({
             order_number: metadata.order_number,
@@ -88,9 +129,10 @@ serve(async (req) => {
             delivery_fee: parseFloat(metadata.delivery_fee || '0'),
             total_amount: parseFloat(metadata.total_amount || '0'),
             payment_status: 'paid',
-            payment_method: metadata.payment_method,
+            status: 'confirmed',
+            payment_method: 'stripe',
             stripe_session_id: session.id,
-            stripe_payment_intent_id: session.payment_intent as string,
+            stripe_payment_intent_id: session.payment_intent,
             paid_amount: (session.amount_total || 0) / 100,
             paid_at: new Date().toISOString(),
             user_id: metadata.user_id !== 'null' ? metadata.user_id : null,
@@ -103,21 +145,22 @@ serve(async (req) => {
               deliveryFee: parseFloat(metadata.delivery_fee || '0'),
               coordinates: coordinates,
               formattedAddress: metadata.formattedAddress,
-              stripeOrderCompleted: true
-            }
+              stripeOrderCompleted: true,
+            },
           })
           .select()
           .single()
 
         if (orderError) {
           console.error('❌ Error creating order:', orderError)
-          throw orderError
+          throw new Error(`Order creation failed: ${orderError.message}`)
         }
 
-        console.log('✅ Order created:', order.id)
+        order = newOrder
+        console.log('✅ Order created in database! ID:', order.id)
 
-        // Create order items
-        const orderItemsToInsert = orderItems.map((item: any) => ({
+        // Create order items (only for new orders)
+        const orderItemsToInsert = orderItems.map((item) => ({
           order_id: order.id,
           product_id: item.product_id,
           product_name: item.product_name,
@@ -130,8 +173,8 @@ serve(async (req) => {
           metadata: {
             extras: item.extras,
             base_price: item.base_price,
-            extras_price: item.extras_price
-          }
+            extras_price: item.extras_price,
+          },
         }))
 
         const { error: itemsError } = await supabaseClient
@@ -140,123 +183,45 @@ serve(async (req) => {
 
         if (itemsError) {
           console.error('❌ Error creating order items:', itemsError)
-          throw itemsError
+        } else {
+          console.log(`✅ Created ${orderItemsToInsert.length} order items`)
         }
-
-        console.log('✅ Order items created')
-
-        // Create notification
-        const { error: notificationError } = await supabaseClient
-          .from('order_notifications')
-          .insert({
-            order_id: order.id,
-            notification_type: 'new_order',
-            title: 'Nuovo Ordine Pagato!',
-            message: `New PAID order from ${metadata.customer_name} - €${metadata.total_amount}`,
-            is_read: false,
-            is_acknowledged: false
-          })
-
-        if (notificationError) {
-          console.error('⚠️ Error creating notification:', notificationError)
-        }
-
-        // Create order status history
-        const { error: historyError } = await supabaseClient
-          .from('order_status_history')
-          .insert({
-            order_id: order.id,
-            status: 'paid',
-            notes: `Payment completed via Stripe. Session: ${session.id}`,
-            created_by: 'stripe_webhook',
-          })
-
-        if (historyError) {
-          console.error('⚠️ Error creating status history:', historyError)
-        }
-
-        console.log('✅ Order creation complete! Order:', order.order_number)
-        break
       }
 
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
-        console.log('Payment failed:', paymentIntent.id)
+      // Create notification
+      const { error: notificationError } = await supabaseClient
+        .from('order_notifications')
+        .insert({
+          order_id: order.id,
+          notification_type: 'new_order',
+          title: 'Nuovo Ordine Pagato!',
+          message: `New PAID order from ${metadata.customer_name} - €${metadata.total_amount}`,
+          is_read: false,
+          is_acknowledged: false,
+        })
 
-        // Find order by payment intent ID
-        const { data: orders, error: findError } = await supabaseClient
-          .from('orders')
-          .select('id')
-          .eq('stripe_payment_intent_id', paymentIntent.id)
-          .limit(1)
-
-        if (findError || !orders || orders.length === 0) {
-          console.error('Could not find order for failed payment:', paymentIntent.id)
-          break
-        }
-
-        const orderId = orders[0].id
-
-        // Update order status
-        const { error: updateError } = await supabaseClient
-          .from('orders')
-          .update({
-            status: 'payment_failed',
-            payment_status: 'failed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', orderId)
-
-        if (updateError) {
-          console.error('Error updating failed payment order:', updateError)
-          throw updateError
-        }
-
-        // Create order status history entry
-        const { error: historyError } = await supabaseClient
-          .from('order_status_history')
-          .insert({
-            order_id: orderId,
-            status: 'payment_failed',
-            notes: `Payment failed. Payment Intent: ${paymentIntent.id}. Reason: ${paymentIntent.last_payment_error?.message || 'Unknown'}`,
-            created_by: 'stripe_webhook',
-          })
-
-        if (historyError) {
-          console.error('Error creating failed payment history:', historyError)
-        }
-
-        console.log('Failed payment order updated:', orderId)
-        break
+      if (notificationError) {
+        console.error('⚠️ Error creating notification:', notificationError)
+      } else {
+        console.log('✅ Notification created')
       }
 
-      default:
-        console.log('Unhandled event type:', event.type)
+      console.log('🎉 Order processing complete! Order number:', order.order_number)
     }
 
-    return new Response(
-      JSON.stringify({ received: true }),
-      {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 200,
-      },
-    )
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
   } catch (error) {
-    console.error('Webhook error:', error)
+    console.error('❌ Webhook error:', error.message)
     return new Response(
-      JSON.stringify({ 
-        error: error.message 
-      }),
+      JSON.stringify({ error: error.message }),
       {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
-      },
+      }
     )
   }
 })

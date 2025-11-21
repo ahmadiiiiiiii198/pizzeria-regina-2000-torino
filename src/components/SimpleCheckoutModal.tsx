@@ -227,10 +227,11 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
       
       const orderNumber = generateOrderNumber();
       
-      // Prepare order items data for Stripe metadata
+      // Prepare order items data for Stripe metadata (will be sent to webhook)
+      // COMPRESS data to fit in Stripe's 500 char metadata limit
       const orderItemsData = cartItems.map(item => {
         const extrasPrice = item.extras ?
-          item.extras.reduce((total, extra) => total + (extra.price * extra.quantity * item.quantity), 0) : 0;
+          item.extras.reduce((total, extra) => total + (extra.price * extra.quantity), 0) : 0;
         const itemTotal = (item.product.price * item.quantity) + extrasPrice;
 
         return {
@@ -242,7 +243,13 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
           unit_price: item.product.price,
           special_requests: item.specialRequests || null,
           toppings: item.extras ? item.extras.map(extra => `${extra.name} x${extra.quantity} (+€${extra.price})`) : [],
-          extras: item.extras || [],
+          // Minify extras - remove description to save space
+          extras: item.extras ? item.extras.map(e => ({
+            id: e.id,
+            name: e.name,
+            price: e.price,
+            quantity: e.quantity
+          })) : [],
           base_price: item.product.price * item.quantity,
           extras_price: extrasPrice
         };
