@@ -27,9 +27,14 @@ serve(async (req) => {
     })
 
     // ⚠️ IMPORTANT: Connect to ORIGINAL database (not this project's database)
+    // FALLBACK: Use hardcoded Anon Key if Service Key is missing
+    // (We confirmed Anon Key has UPDATE permissions via check-rls.js)
+    const MAIN_DB_URL = 'https://sixnfemtvmighstbgrbd.supabase.co'
+    const MAIN_DB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I'
+    
     const supabaseClient = createClient(
-      Deno.env.get('ORIGINAL_SUPABASE_URL') || 'https://sixnfemtvmighstbgrbd.supabase.co',
-      Deno.env.get('ORIGINAL_SERVICE_ROLE_KEY') || ''
+      Deno.env.get('ORIGINAL_SUPABASE_URL') || MAIN_DB_URL,
+      Deno.env.get('ORIGINAL_SERVICE_ROLE_KEY') || MAIN_DB_ANON_KEY
     )
     
     console.log('✅ Connected to original database')
@@ -37,16 +42,29 @@ serve(async (req) => {
     const signature = req.headers.get('stripe-signature')
     const body = await req.text()
     
-    // Get webhook secret from environment variable
-    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+    // Get webhook secret from environment variable OR database
+    let webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
     
     if (!webhookSecret) {
-      console.error('❌ STRIPE_WEBHOOK_SECRET not found in environment')
-      throw new Error('Webhook secret not configured')
+      console.log('⚠️ STRIPE_WEBHOOK_SECRET not in env, fetching from database...')
+      
+      const { data: setting, error: settingError } = await supabaseClient
+        .from('settings')
+        .select('value')
+        .eq('key', 'stripe_webhook_secret')
+        .single()
+        
+      if (settingError || !setting) {
+        console.error('❌ Failed to fetch webhook secret from DB:', settingError)
+        throw new Error('Webhook secret not configured in Env or DB')
+      }
+      
+      webhookSecret = setting.value
+      console.log('✅ Webhook secret loaded from database')
+    } else {
+      console.log('✅ Webhook secret loaded from environment')
     }
     
-    console.log('✅ Webhook secret loaded from environment')
-
     if (!signature) {
       throw new Error('Missing stripe signature')
     }
