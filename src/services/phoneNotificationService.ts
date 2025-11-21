@@ -527,16 +527,24 @@ class PhoneNotificationService {
 
       // Convert to WAV
       const wavData = this.audioBufferToWav(audioBuffer);
-      const blob = new Blob([wavData], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
       
-      console.log('🔊 [PhoneNotification] Generated professional 3-tone notification sound');
-      return url;
+      // Convert ArrayBuffer to Base64 string properly
+      let binary = '';
+      const bytes = new Uint8Array(wavData);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = window.btoa(binary);
+      const dataUrl = `data:audio/wav;base64,${base64}`;
+      
+      console.log('🔊 [PhoneNotification] Generated professional 3-tone notification sound (Base64)');
+      return dataUrl;
       
     } catch (error) {
       console.error('❌ [PhoneNotification] Error generating sound:', error);
       // Fallback to simple beep
-      return 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      return 'data:audio/wav;base64,UklGRiQEAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAEAAA=';
     }
   }
 
