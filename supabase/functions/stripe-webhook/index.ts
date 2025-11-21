@@ -26,14 +26,12 @@ serve(async (req) => {
     })
 
     // ⚠️ IMPORTANT: Connect to ORIGINAL database (not this project's database)
-    // FALLBACK: Use hardcoded Anon Key if Service Key is missing
+    // FORCE use of hardcoded credentials (env vars have wrong keys)
     const MAIN_DB_URL = 'https://sixnfemtvmighstbgrbd.supabase.co'
     const MAIN_DB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I'
     
-    const supabaseClient = createClient(
-      Deno.env.get('ORIGINAL_SUPABASE_URL') || MAIN_DB_URL,
-      Deno.env.get('ORIGINAL_SERVICE_ROLE_KEY') || MAIN_DB_ANON_KEY
-    )
+    // ALWAYS use hardcoded credentials (verified working)
+    const supabaseClient = createClient(MAIN_DB_URL, MAIN_DB_ANON_KEY)
     
     console.log('✅ Connected to original database')
 
