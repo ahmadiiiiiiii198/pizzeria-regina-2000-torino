@@ -92,14 +92,22 @@ serve(async (req) => {
 })
 
 async function handleEvent(event: any, supabaseClient: any) {
+    console.log('🎯 handleEvent called with event type:', event.type)
+    
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
       console.log('💳 Checkout session completed:', session.id)
+      console.log('📋 Session metadata:', JSON.stringify(session.metadata))
 
       const metadata = session.metadata
       if (!metadata) {
         console.error('❌ No metadata in session')
-        return
+        throw new Error('No metadata in checkout session')
+      }
+      
+      if (!metadata.order_number) {
+        console.error('❌ No order_number in metadata')
+        throw new Error('No order_number in metadata')
       }
 
       const orderNumber = metadata.order_number
