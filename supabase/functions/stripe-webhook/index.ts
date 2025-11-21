@@ -126,8 +126,6 @@ async function handleEvent(event: any, supabaseClient: any) {
             status: 'confirmed',
             stripe_session_id: session.id,
             stripe_payment_intent_id: session.payment_intent,
-            paid_amount: (session.amount_total || 0) / 100,
-            paid_at: new Date().toISOString(),
           })
           .eq('id', existingOrder.id)
           .select()
@@ -164,8 +162,6 @@ async function handleEvent(event: any, supabaseClient: any) {
             payment_method: 'stripe',
             stripe_session_id: session.id,
             stripe_payment_intent_id: session.payment_intent,
-            paid_amount: (session.amount_total || 0) / 100,
-            paid_at: new Date().toISOString(),
             user_id: metadata.user_id !== 'null' ? metadata.user_id : null,
             metadata: {
               clientId: metadata.clientId,
