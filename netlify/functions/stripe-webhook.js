@@ -68,91 +68,162 @@ exports.handler = async (event) => {
         return { statusCode: 200, body: JSON.stringify({ received: true }) };
       }
 
-      // Parse order data from metadata
-      const orderItems = JSON.parse(metadata.order_items || '[]');
-      const coordinates = JSON.parse(metadata.coordinates || '{}');
+      const orderNumber = metadata.order_number;
+      console.log('🔍 Looking for existing order:', orderNumber);
 
-      // Create order
-      const { data: order, error: orderError } = await supabase
+      // Find existing order by order_number
+      const { data: existingOrder, error: findError } = await supabase
         .from('orders')
-        .insert({
-          order_number: metadata.order_number,
-          customer_name: metadata.customer_name,
-          customer_email: metadata.customer_email,
-          customer_phone: metadata.customer_phone,
-          customer_address: metadata.customer_address,
-          delivery_type: metadata.delivery_type,
-          delivery_fee: parseFloat(metadata.delivery_fee || '0'),
-          total_amount: parseFloat(metadata.total_amount || '0'),
-          payment_status: 'paid',
-          payment_method: metadata.payment_method,
-          stripe_session_id: session.id,
-          stripe_payment_intent_id: session.payment_intent,
-          paid_amount: (session.amount_total || 0) / 100,
-          paid_at: new Date().toISOString(),
-          user_id: metadata.user_id !== 'null' ? metadata.user_id : null,
-          metadata: {
-            clientId: metadata.clientId,
-            deviceFingerprint: metadata.deviceFingerprint,
-            sessionId: metadata.sessionId,
-            orderCreatedAt: new Date().toISOString(),
-            isAuthenticatedOrder: metadata.isAuthenticatedOrder === 'true',
-            deliveryFee: parseFloat(metadata.delivery_fee || '0'),
-            coordinates: coordinates,
-            formattedAddress: metadata.formattedAddress,
-            stripeOrderCompleted: true,
-          },
-        })
-        .select()
+        .select('id')
+        .eq('order_number', orderNumber)
         .single();
 
-      if (orderError) {
-        console.error('❌ Error creating order:', orderError);
-        throw orderError;
+      if (findError || !existingOrder) {
+        console.error('❌ Existing order not found:', findError?.message || 'No order');
+        // Fallback: create new order if not found
+        console.log('⚠️ Creating new order as fallback...');
       }
 
-      console.log('✅ Order created:', order.id);
+      if (existingOrder) {
+        // UPDATE existing order
+        console.log('✅ Found existing order:', existingOrder.id);
+        
+        // First, get current metadata
+        const { data: currentOrder } = await supabase
+          .from('orders')
+          .select('metadata')
+          .eq('id', existingOrder.id)
+          .single();
+        
+        const updatedMetadata = {
+          ...(currentOrder?.metadata || {}),
+          stripeOrderCompleted: true,
+          stripeSessionId: session.id,
+          paymentConfirmedAt: new Date().toISOString(),
+        };
+        
+        const { data: updatedOrder, error: updateError } = await supabase
+          .from('orders')
+          .update({
+            payment_status: 'paid',
+            status: 'confirmed',
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent,
+            paid_amount: (session.amount_total || 0) / 100,
+            paid_at: new Date().toISOString(),
+            metadata: updatedMetadata,
+          })
+          .eq('id', existingOrder.id)
+          .select()
+          .single();
 
-      // Create order items
-      const orderItemsToInsert = orderItems.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        product_name: item.product_name,
-        product_price: item.product_price,
-        quantity: item.quantity,
-        subtotal: item.subtotal,
-        unit_price: item.unit_price,
-        special_requests: item.special_requests,
-        toppings: item.toppings,
-        metadata: {
-          extras: item.extras,
-          base_price: item.base_price,
-          extras_price: item.extras_price,
-        },
-      }));
+        if (updateError) {
+          console.error('❌ Error updating order:', updateError);
+          throw updateError;
+        }
 
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsToInsert);
+        console.log('✅ Order updated to PAID and CONFIRMED:', updatedOrder.id);
 
-      if (itemsError) {
-        console.error('❌ Error creating order items:', itemsError);
+        // Create notification for updated order
+        await supabase.from('order_notifications').insert({
+          order_id: updatedOrder.id,
+          notification_type: 'payment_confirmed',
+          title: 'Pagamento Confermato!',
+          message: `Payment confirmed for order ${orderNumber} - €${metadata.total_amount}`,
+          is_read: false,
+          is_acknowledged: false,
+        });
+
+        console.log('✅ Notification created');
+        console.log('🎉 Order payment confirmed!');
+        
       } else {
-        console.log('✅ Order items created');
+        // FALLBACK: Create new order (old behavior)
+        const orderItems = JSON.parse(metadata.order_items || '[]');
+        const coordinates = JSON.parse(metadata.coordinates || '{}');
+
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            order_number: metadata.order_number,
+            customer_name: metadata.customer_name,
+            customer_email: metadata.customer_email,
+            customer_phone: metadata.customer_phone,
+            customer_address: metadata.customer_address,
+            delivery_type: metadata.delivery_type,
+            delivery_fee: parseFloat(metadata.delivery_fee || '0'),
+            total_amount: parseFloat(metadata.total_amount || '0'),
+            payment_status: 'paid',
+            status: 'confirmed',
+            payment_method: 'stripe',
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent,
+            paid_amount: (session.amount_total || 0) / 100,
+            paid_at: new Date().toISOString(),
+            user_id: metadata.user_id !== 'null' ? metadata.user_id : null,
+            metadata: {
+              clientId: metadata.clientId,
+              deviceFingerprint: metadata.deviceFingerprint,
+              sessionId: metadata.sessionId,
+              orderCreatedAt: new Date().toISOString(),
+              isAuthenticatedOrder: metadata.isAuthenticatedOrder === 'true',
+              deliveryFee: parseFloat(metadata.delivery_fee || '0'),
+              coordinates: coordinates,
+              formattedAddress: metadata.formattedAddress,
+              stripeOrderCompleted: true,
+            },
+          })
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error('❌ Error creating order:', orderError);
+          throw orderError;
+        }
+
+        console.log('✅ Order created:', order.id);
+
+        // Create order items
+        const orderItemsToInsert = orderItems.map((item) => ({
+          order_id: order.id,
+          product_id: item.product_id,
+          product_name: item.product_name,
+          product_price: item.product_price,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          unit_price: item.unit_price,
+          special_requests: item.special_requests,
+          toppings: item.toppings,
+          metadata: {
+            extras: item.extras,
+            base_price: item.base_price,
+            extras_price: item.extras_price,
+          },
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItemsToInsert);
+
+        if (itemsError) {
+          console.error('❌ Error creating order items:', itemsError);
+        } else {
+          console.log('✅ Order items created');
+        }
+
+        // Create notification
+        await supabase.from('order_notifications').insert({
+          order_id: order.id,
+          notification_type: 'new_order',
+          title: 'Nuovo Ordine Pagato!',
+          message: `New PAID order from ${metadata.customer_name} - €${metadata.total_amount}`,
+          is_read: false,
+          is_acknowledged: false,
+        });
+
+        console.log('✅ Notification created');
+        console.log('🎉 Order processing complete!');
       }
-
-      // Create notification
-      await supabase.from('order_notifications').insert({
-        order_id: order.id,
-        notification_type: 'new_order',
-        title: 'Nuovo Ordine Pagato!',
-        message: `New PAID order from ${metadata.customer_name} - €${metadata.total_amount}`,
-        is_read: false,
-        is_acknowledged: false,
-      });
-
-      console.log('✅ Notification created');
-      console.log('🎉 Order processing complete!');
     }
 
     return {
