@@ -67,8 +67,8 @@ serve(async (req) => {
       throw new Error('Missing stripe signature')
     }
 
-    // Verify the webhook signature
-    const event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    // Verify the webhook signature (MUST use async version in Deno)
+    const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret)
     console.log('✅ Webhook verified! Event type:', event.type)
     
     // Handle event
