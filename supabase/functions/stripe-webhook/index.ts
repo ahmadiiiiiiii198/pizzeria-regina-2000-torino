@@ -1,6 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-// READY TO PASTE - Stripe Webhook Edge Function
-// This connects to your ORIGINAL database while running on NEW project
+// STRIPE WEBHOOK EDGE FUNCTION
 // ═══════════════════════════════════════════════════════════════════════
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
@@ -28,7 +27,6 @@ serve(async (req) => {
 
     // ⚠️ IMPORTANT: Connect to ORIGINAL database (not this project's database)
     // FALLBACK: Use hardcoded Anon Key if Service Key is missing
-    // (We confirmed Anon Key has UPDATE permissions via check-rls.js)
     const MAIN_DB_URL = 'https://sixnfemtvmighstbgrbd.supabase.co'
     const MAIN_DB_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I'
     
@@ -71,22 +69,37 @@ serve(async (req) => {
 
     // Verify the webhook signature
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
-
     console.log('✅ Webhook verified! Event type:', event.type)
+    
+    // Handle event
+    await handleEvent(event, supabaseClient)
 
-    // Handle the event
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    console.error('❌ Webhook error:', error.message)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
+
+async function handleEvent(event: any, supabaseClient: any) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
       console.log('💳 Checkout session completed:', session.id)
-      console.log('📦 Creating order from session metadata...')
 
       const metadata = session.metadata
       if (!metadata) {
         console.error('❌ No metadata in session')
-        return new Response(JSON.stringify({ received: true, message: 'No metadata' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        })
+        return
       }
 
       const orderNumber = metadata.order_number
@@ -178,7 +191,7 @@ serve(async (req) => {
         console.log('✅ Order created in database! ID:', order.id)
 
         // Create order items (only for new orders)
-        const orderItemsToInsert = orderItems.map((item) => ({
+        const orderItemsToInsert = orderItems.map((item: any) => ({
           order_id: order.id,
           product_id: item.product_id,
           product_name: item.product_name,
@@ -226,20 +239,4 @@ serve(async (req) => {
 
       console.log('🎉 Order processing complete! Order number:', order.order_number)
     }
-
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-
-  } catch (error) {
-    console.error('❌ Webhook error:', error.message)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
-    )
-  }
-})
+}
