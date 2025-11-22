@@ -29,6 +29,7 @@ interface AddressValidationResult {
   estimatedTime: string;
   formattedAddress: string;
   coordinates: { lat: number; lng: number };
+  zone?: string; // Zone name for display
   error?: string;
 }
 
@@ -100,8 +101,37 @@ class ShippingZoneService {
         localStorage.removeItem('deliveryZones');
         localStorage.removeItem('shippingZoneSettings');
       } else {
-        console.log('⚠️ No delivery zones found in database');
-        this.deliveryZones = [];
+        console.log('⚠️ No delivery zones found in database - initializing defaults');
+        // 🔧 AUTO-INITIALIZE: Set up default zones if none exist
+        this.deliveryZones = [
+          {
+            id: '1',
+            name: 'Zone 1 (0-5km)',
+            maxDistance: 5,
+            deliveryFee: 3.00,
+            estimatedTime: '20-30 minutes',
+            isActive: true
+          },
+          {
+            id: '2',
+            name: 'Zone 2 (5-10km)',
+            maxDistance: 10,
+            deliveryFee: 5.00,
+            estimatedTime: '30-45 minutes',
+            isActive: true
+          },
+          {
+            id: '3',
+            name: 'Zone 3 (10-15km)',
+            maxDistance: 15,
+            deliveryFee: 8.00,
+            estimatedTime: '45-60 minutes',
+            isActive: true
+          }
+        ];
+        console.log('✅ Default zones initialized:', this.deliveryZones.length, 'zones');
+        // Save to database for future use
+        await this.saveSettings();
       }
     } catch (error) {
       console.error('Failed to load shipping zone settings:', error);
@@ -217,11 +247,19 @@ class ShippingZoneService {
       throw new Error('Google Maps API key not configured. Please configure it in the admin panel.');
     }
 
-    console.log('🗺️ Geocoding address:', address);
+    // 🏙️ Default to Torino, Italy if no city/country is specified
+    let fullAddress = address.trim();
+    const hasCity = /torino|turin|italy|italia|milano|roma|napoli|TO|IT/i.test(address);
+    if (!hasCity && fullAddress.length > 0) {
+      fullAddress = `${address}, Torino, Italy`;
+      console.log('🏙️ Appended default city:', fullAddress);
+    }
+
+    console.log('🗺️ Geocoding address:', fullAddress);
     console.log('🔑 Using API key:', this.settings.googleMapsApiKey ? 'Present' : 'Missing');
 
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${this.settings.googleMapsApiKey}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${this.settings.googleMapsApiKey}`;
       console.log('🔗 Geocoding URL:', url.replace(this.settings.googleMapsApiKey, 'API_KEY_HIDDEN'));
 
       const response = await fetch(url);
@@ -262,6 +300,16 @@ class ShippingZoneService {
 
   // Validate delivery address
   public async validateDeliveryAddress(address: string, orderAmount: number = 0): Promise<AddressValidationResult> {
+    // 🔧 CRITICAL: Ensure service is initialized and delivery zones are loaded
+    await this.ensureInitialized();
+    
+    console.log('🔍 Validating with settings:', {
+      enabled: this.settings.enabled,
+      zonesCount: this.deliveryZones.length,
+      freeDeliveryThreshold: this.settings.freeDeliveryThreshold,
+      orderAmount
+    });
+
     if (!this.settings.enabled) {
       return {
         isValid: true,
@@ -316,7 +364,11 @@ class ShippingZoneService {
       // Find appropriate delivery zone
       const deliveryZone = this.findDeliveryZone(distance);
       
+      console.log('📍 Distance calculated:', distance.toFixed(2), 'km');
+      console.log('🗺️ Delivery zone found:', deliveryZone ? deliveryZone.name : 'NONE');
+      
       if (!deliveryZone) {
+        console.error('❌ NO DELIVERY ZONE FOUND! Available zones:', this.deliveryZones);
         return {
           isValid: true,
           isWithinZone: false,
@@ -330,7 +382,17 @@ class ShippingZoneService {
       }
 
       // Calculate delivery fee (free if order amount exceeds threshold)
-      const deliveryFee = orderAmount >= this.settings.freeDeliveryThreshold ? 0 : deliveryZone.deliveryFee;
+      const baseDeliveryFee = deliveryZone.deliveryFee;
+      const isFreeDelivery = orderAmount >= this.settings.freeDeliveryThreshold;
+      const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
+      
+      console.log('💰 Delivery Fee Calculation:', {
+        orderAmount,
+        freeDeliveryThreshold: this.settings.freeDeliveryThreshold,
+        baseDeliveryFee,
+        isFreeDelivery,
+        finalDeliveryFee: deliveryFee
+      });
 
       return {
         isValid: true,
@@ -339,7 +401,8 @@ class ShippingZoneService {
         deliveryFee,
         estimatedTime: deliveryZone.estimatedTime,
         formattedAddress: geocodeResult.formattedAddress,
-        coordinates: geocodeResult
+        coordinates: geocodeResult,
+        zone: deliveryZone.name // Include zone name for display
       };
 
     } catch (error) {

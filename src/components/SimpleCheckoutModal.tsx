@@ -57,6 +57,20 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
     }
   }, [isOpen]);
 
+  // 🔧 CRITICAL: Re-validate address when totalAmount changes to recalculate delivery fee
+  useEffect(() => {
+    if (customerData.deliveryAddress && addressValidation && totalAmount > 0) {
+      console.log('🔄 Total amount changed to', totalAmount, '- re-validating address to update delivery fee');
+      // Re-validate with new total amount
+      const revalidate = async () => {
+        const result = await shippingZoneService.validateDeliveryAddress(customerData.deliveryAddress, totalAmount);
+        setAddressValidation(result);
+      };
+      revalidate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAmount]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -524,9 +538,9 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
                   <span>Subtotale:</span>
                   <span>€{(totalAmount || 0).toFixed(2)}</span>
                 </div>
-                {addressValidation?.deliveryFee && (
+                {addressValidation?.deliveryFee !== undefined && addressValidation.deliveryFee > 0 && (
                   <div className="flex justify-between text-blue-600">
-                    <span>Costo consegna ({addressValidation.zone}):</span>
+                    <span>Costo consegna{addressValidation.zone ? ` (${addressValidation.zone})` : ''}:</span>
                     <span>€{(addressValidation.deliveryFee || 0).toFixed(2)}</span>
                   </div>
                 )}

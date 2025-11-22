@@ -61,6 +61,21 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
     }
   }, [isOpen]);
 
+  // 🔧 CRITICAL: Re-validate address when totalAmount changes to recalculate delivery fee
+  useEffect(() => {
+    if (customerData.deliveryAddress && addressValidation && totalAmount > 0) {
+      console.log('🔄 CartCheckout - Total amount changed to', totalAmount, '- re-validating address');
+      // Re-validate with new total amount
+      const revalidate = async () => {
+        const result = await shippingZoneService.validateAddress(customerData.deliveryAddress, totalAmount);
+        setAddressValidation(result);
+        console.log('✅ Re-validated with delivery fee:', result.deliveryFee);
+      };
+      revalidate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAmount]);
+
   const handleInputChange = (field: keyof CustomerData, value: string) => {
     setCustomerData(prev => ({ ...prev, [field]: value }));
     
@@ -75,8 +90,9 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
     
     setIsValidatingAddress(true);
     try {
-      const result = await shippingZoneService.validateAddress(address);
+      const result = await shippingZoneService.validateAddress(address, totalAmount);
       setAddressValidation(result);
+      console.log('✅ Address validated with delivery fee:', result.deliveryFee, 'for order total:', totalAmount);
     } catch (error) {
       console.error('Address validation error:', error);
       setAddressValidation({
@@ -493,18 +509,16 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
                 <span>Subtotale:</span>
                 <span>€{(totalAmount || 0).toFixed(2)}</span>
               </div>
-              {addressValidation?.deliveryFee > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>Spese di consegna:</span>
+              {addressValidation?.deliveryFee !== undefined && addressValidation.deliveryFee > 0 && (
+                <div className="flex justify-between text-sm text-blue-600">
+                  <span>Spese di consegna{addressValidation.zone ? ` (${addressValidation.zone})` : ''}:</span>
                   <span>€{(addressValidation.deliveryFee || 0).toFixed(2)}</span>
                 </div>
               )}
-              {addressValidation?.deliveryFee > 0 && (
-                <div className="border-t pt-2 font-bold flex justify-between">
-                  <span>Totale:</span>
-                  <span>€{((totalAmount || 0) + (addressValidation.deliveryFee || 0)).toFixed(2)}</span>
-                </div>
-              )}
+              <div className="border-t pt-2 font-bold flex justify-between text-lg">
+                <span>Totale:</span>
+                <span>€{((totalAmount || 0) + (addressValidation?.deliveryFee || 0)).toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
