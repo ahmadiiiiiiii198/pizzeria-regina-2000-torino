@@ -195,25 +195,22 @@ const Hero = () => {
       <div className="container mx-auto px-4 pt-32 pb-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[80vh] hero-main-grid">
 
-          {/* Left Column - Brand Logo Card */}
-          <div className="relative animate-fade-in-left">
+          {/* Left Column - Brand Logo */}
+          <div className="relative animate-fade-in-left flex items-center justify-center">
             <div
-              className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-white via-red-50 to-orange-50 p-4 sm:p-6 md:p-8 hover-lift flex items-center justify-center"
+              className="relative w-full max-w-xl flex items-center justify-center p-4 sm:p-6"
               style={{
                 minHeight: '520px'
               }}
             >
-              {/* Logo loading placeholder - ABSOLUTE so it doesn't push the image down */}
+              {/* Logo loading placeholder - Subtle transparent overlay so it never flashes white */}
               {!logoImageLoaded && (
-                <div className="absolute inset-4 sm:inset-6 md:inset-8 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 animate-pulse flex items-center justify-center z-10">
-                  <Pizza className="text-red-400 animate-float" size={64} />
-                  <div className="ml-4 text-red-600 font-semibold">
-                    Caricamento...
-                  </div>
+                <div className="absolute inset-4 sm:inset-6 rounded-2xl bg-black/20 backdrop-blur-sm animate-pulse flex items-center justify-center z-10">
+                  <Pizza className="text-red-400/60 animate-float" size={64} />
                 </div>
               )}
 
-              {/* Main logo image */}
+              {/* Main logo image - Floating transparently without white card background */}
               {logoSettings.logoUrl && (
                 <img
                   ref={(img) => {
@@ -223,7 +220,7 @@ const Hero = () => {
                   }}
                   src={logoSettings.logoUrl}
                   alt={logoSettings.altText}
-                  className={`relative z-10 w-full h-auto max-h-[500px] object-contain drop-shadow-2xl transition-all duration-700 hover-scale ${
+                  className={`relative z-10 w-full h-auto max-h-[500px] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] transition-all duration-700 hover:scale-105 ${
                     logoImageLoaded ? 'opacity-100' : 'opacity-0'
                   }`}
                   loading="eager"
@@ -236,8 +233,6 @@ const Hero = () => {
                   }}
                 />
               )}
-
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none z-10"></div>
             </div>
           </div>
 
