@@ -88,4 +88,8 @@ if (allExist) {
   process.exit(1);
 }
 
+// Generate 200.html for Cloudflare Pages / SPA fallback
+fs.copyFileSync(indexPath, path.join(distPath, '200.html'));
+console.log('✅ Generated 200.html for Cloudflare SPA fallback');
+
 console.log('✅ Build verification complete!\n');
