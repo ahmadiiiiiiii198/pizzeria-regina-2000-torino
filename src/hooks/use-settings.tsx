@@ -28,8 +28,8 @@ class SettingsSubscriptionManager {
       const channel = supabase
         .channel(`settings-${key}`)
         .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
+          event: '*',
+          schema: 'regina',
           table: 'settings',
           filter: `key=eq.${key}`
         }, (payload) => {
@@ -70,7 +70,12 @@ const subscriptionManager = SettingsSubscriptionManager.getInstance();
 
 // Generic hook to use any setting with type safety
 export function useSetting<T>(key: string, defaultValue: T): [T, (value: T) => Promise<boolean>, boolean] {
-  const [value, setValue] = useState<T>(defaultValue);
+  const [value, setValue] = useState<T>(() => {
+    if (key === 'heroContent' && heroContentCache) {
+      return heroContentCache as T;
+    }
+    return defaultValue;
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
@@ -165,7 +170,7 @@ export function useSetting<T>(key: string, defaultValue: T): [T, (value: T) => P
           setValue(newValue as T);
         });
 
-        // Also listen for storage events
+        // Also listen for storage and database events
         const handleStorageEvent = (e: StorageEvent | CustomEvent) => {
           const storageEvent = e as StorageEvent;
           const customEvent = e as CustomEvent<{key: string}>;
@@ -179,13 +184,33 @@ export function useSetting<T>(key: string, defaultValue: T): [T, (value: T) => P
           }
         };
 
+        const handleDatabaseEvent = (e: any) => {
+          if (!e?.detail?.key || e.detail.key === key) {
+            console.log(`[useSetting] Database update event detected for ${key}, reloading...`);
+            loadSetting();
+          }
+        };
+
+        const handleHeroUpdate = () => {
+          if (key === 'heroContent') {
+            console.log('[useSetting] heroContentUpdated event detected, reloading...');
+            loadSetting();
+          }
+        };
+
         window.addEventListener('storage', handleStorageEvent as EventListener);
         window.addEventListener('localStorageUpdated', handleStorageEvent as EventListener);
+        window.addEventListener('databaseUpdated', handleDatabaseEvent as EventListener);
+        window.addEventListener('databaseChange', handleDatabaseEvent as EventListener);
+        window.addEventListener('heroContentUpdated', handleHeroUpdate as EventListener);
 
         return () => {
           unsubscribe();
           window.removeEventListener('storage', handleStorageEvent as EventListener);
           window.removeEventListener('localStorageUpdated', handleStorageEvent as EventListener);
+          window.removeEventListener('databaseUpdated', handleDatabaseEvent as EventListener);
+          window.removeEventListener('databaseChange', handleDatabaseEvent as EventListener);
+          window.removeEventListener('heroContentUpdated', handleHeroUpdate as EventListener);
         };
       } catch (error) {
         console.error(`[useSetting] Error initializing settings for ${key}:`, error);
@@ -227,7 +252,7 @@ export function useSetting<T>(key: string, defaultValue: T): [T, (value: T) => P
 // Type-specific hooks for common settings
 // Default settings constants to avoid hoisting issues
 const DEFAULT_LOGO_SETTINGS = {
-  logoUrl: "/pizzeria-regina-logo.png",
+  logoUrl: "/logo.png",
   altText: "Pizzeria Regina 2000 Torino Logo",
 };
 
@@ -303,18 +328,32 @@ preloadHeroContent();
 export function useHeroContent() {
   const [content, updateContent, isLoading] = useSetting('heroContent', DEFAULT_HERO_CONTENT);
 
-  // Use cached content if available to reduce loading time
+  const updateHeroContent = useCallback(async (newContent: typeof DEFAULT_HERO_CONTENT) => {
+    heroContentCache = newContent;
+    try {
+      localStorage.removeItem(HERO_CACHE_KEY);
+      localStorage.removeItem(HERO_CACHE_TIMESTAMP_KEY);
+      localStorage.setItem('heroContent', JSON.stringify(newContent));
+    } catch (e) {
+      // Ignore
+    }
+    return await updateContent(newContent);
+  }, [updateContent]);
+
+  // Keep cache and localStorage in sync with live setting
   useEffect(() => {
-    if (heroContentCache && !isLoading) {
-      // Only update if the cached content is different
-      if (JSON.stringify(content) !== JSON.stringify(heroContentCache)) {
-        // Don't call updateContent here to avoid infinite loops
-        // The useSetting hook will handle the update
+    if (content) {
+      heroContentCache = content;
+      try {
+        localStorage.setItem(HERO_CACHE_KEY, JSON.stringify(content));
+        localStorage.setItem(HERO_CACHE_TIMESTAMP_KEY, Date.now().toString());
+      } catch (e) {
+        // Ignore
       }
     }
-  }, [content, isLoading]);
+  }, [content]);
 
-  return [heroContentCache || content, updateContent, isLoading] as const;
+  return [content, updateHeroContent, isLoading] as const;
 }
 
 const DEFAULT_ABOUT_CONTENT = {

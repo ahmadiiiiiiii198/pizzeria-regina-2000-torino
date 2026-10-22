@@ -99,6 +99,8 @@ const YouTubeSection = () => {
                       src={videoData.thumbnailUrl}
                       alt="Video thumbnail"
                       className="w-full h-64 md:h-96 lg:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105"
+                      loading="lazy"
+                      decoding="async"
                       onLoad={() => setIsVideoLoaded(true)}
                       onError={(e) => {
                         // Fallback to default thumbnail

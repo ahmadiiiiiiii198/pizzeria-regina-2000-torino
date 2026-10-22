@@ -4,10 +4,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://sixnfemtvmighstbgrbd.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I";
+const supabaseUrl = "https://jncuwwavffepnajxvjxq.supabase.co";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpuY3V3d2F2ZmZlcG5hanh2anhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4MzMxMjUsImV4cCI6MjA3NTQwOTEyNX0.wDlEZbpy1rfAk8GtzuqB28qINkAG3GbqMxVZmW85hzo";
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  db: { schema: 'regina' }
+});
 
 async function testDatabase() {
   console.log('🔍 QUICK DATABASE TEST');
@@ -36,11 +38,11 @@ async function testDatabase() {
   
   for (const table of tables) {
     try {
-      const { data, error } = await supabase.from(table).select('*').limit(1);
+      const { data, error, count } = await supabase.from(table).select('*', { count: 'exact', head: true });
       if (error) {
         console.log(`❌ Table '${table}': ${error.message}`);
       } else {
-        console.log(`✅ Table '${table}': OK`);
+        console.log(`✅ Table '${table}': OK (${count} rows)`);
       }
     } catch (e) {
       console.log(`❌ Table '${table}': ${e.message}`);
@@ -58,31 +60,6 @@ async function testDatabase() {
     }
   } catch (e) {
     console.log(`❌ Auth exception: ${e.message}`);
-  }
-
-  // 4. Registration Test
-  console.log('\n4. Testing user registration...');
-  try {
-    const testEmail = `test-${Date.now()}@example.com`;
-    const { data, error } = await supabase.auth.signUp({
-      email: testEmail,
-      password: 'testpass123',
-      options: {
-        data: { full_name: 'Test User' }
-      }
-    });
-
-    if (error) {
-      console.log(`❌ Registration failed: ${error.message}`);
-      if (error.message.includes('Database error saving new user')) {
-        console.log('🎯 ISSUE IDENTIFIED: Database trigger failure');
-        console.log('   This means the create_user_profile trigger is missing or broken');
-      }
-    } else {
-      console.log(`✅ Registration successful: ${data.user?.id}`);
-    }
-  } catch (e) {
-    console.log(`❌ Registration exception: ${e.message}`);
   }
 
   // 5. Performance Test

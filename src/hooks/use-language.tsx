@@ -130,7 +130,6 @@ const translations: Record<Language, Record<string, string>> = {
     "pizzeriaLocation": "Torino",
     "heroSubtitle": "Autentica Pizza Italiana",
     "heroDescription": "Autentica pizza italiana nel cuore di Torino dal 2000",
-    "gallery": "Galleria",
     "goToGallery": "Vai alla Galleria",
 
     // Footer services
@@ -281,7 +280,6 @@ const translations: Record<Language, Record<string, string>> = {
     "pizzeriaLocation": "Turin",
     "heroSubtitle": "Authentic Italian Pizza",
     "heroDescription": "Authentic Italian pizza in the heart of Turin since 2000",
-    "gallery": "Gallery",
     "goToGallery": "Go to Gallery",
 
     // Footer services

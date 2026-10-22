@@ -405,7 +405,8 @@ const ContactSection = () => {
               <CardContent className="p-0">
                 <div className="h-64 relative">
                   <iframe
-                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyDnJS3eyAnguEeCdZIMmYUNzq8LOBhmkMA&q=Corso+Regina+Margherita+53+10124+Torino+Italy&zoom=16&maptype=roadmap"
+                    src="https://maps.google.com/maps?q=Corso+Regina+Margherita+53%2Fb,+10124+Torino+TO,+Italy&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                    title="Posizione Pizzeria Regina 2000"
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}

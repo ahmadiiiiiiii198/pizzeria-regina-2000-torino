@@ -1,4 +1,5 @@
 
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,31 +12,35 @@ import { BusinessHoursProvider } from "@/contexts/BusinessHoursContext";
 import { initializeDatabaseOnlyTracking } from "@/utils/clearLocalStorageOrders";
 
 import ErrorBoundary from "./components/ErrorBoundary";
-import { UpdateNotification } from "./components/UpdateNotification";
-// import DiagnosticInfo from "./components/DiagnosticInfo"; // Removed diagnostic button
 import BackgroundInitializer from "./components/BackgroundInitializer";
-// import ButtonDebugger from "./components/ButtonDebugger"; // Removed debug component
-// OrderNotificationSystem moved to admin panel only to prevent conflicts
+
+// Home page loaded eagerly for instant first-paint
 import Index from "./pages/Index";
-import Admin from "./pages/Admin";
-import AdminMinimal from "./pages/AdminMinimal";
-import Ordini from "./pages/Ordini";
 
-import OrderDashboardPro from "./pages/OrderDashboardPro";
-import OrderTracking from "./pages/OrderTracking";
-import MenuPage from "./pages/MenuPage";
-import NotFound from "./pages/NotFound";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCancel from "./pages/PaymentCancel";
+// Lazy-load secondary and admin routes for fast initial page load
+const Admin = lazy(() => import("./pages/Admin"));
+const Ordini = lazy(() => import("./pages/Ordini"));
+const OrderDashboardPro = lazy(() => import("./pages/OrderDashboardPro"));
+const OrderTracking = lazy(() => import("./pages/OrderTracking"));
+const MenuPage = lazy(() => import("./pages/MenuPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentCancel = lazy(() => import("./pages/PaymentCancel"));
+const SimpleStripeTest = lazy(() => import("./components/SimpleStripeTest"));
+const AuthTest = lazy(() => import("./components/AuthTest"));
+const AuthTestHelper = lazy(() => import("./components/AuthTestHelper"));
+const AuthSeparationTest = lazy(() => import("./components/AuthSeparationTest"));
+const MyOrders = lazy(() => import("./pages/MyOrders"));
+const ComponentLoadingTest = lazy(() => import("./tests/ComponentLoadingTest"));
 
-// DatabaseSetup component removed to prevent accidental initialization
-import SimpleStripeTest from "./components/SimpleStripeTest";
-import AuthTest from "./components/AuthTest";
-import AuthTestHelper from "./components/AuthTestHelper";
-import AuthSeparationTest from "./components/AuthSeparationTest";
-import MyOrders from "./pages/MyOrders";
-import UnifiedOrderTracker from "./components/UnifiedOrderTracker";
-import ComponentLoadingTest from "./tests/ComponentLoadingTest";
+const RouteLoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-gray-600 font-medium text-sm">Caricamento...</p>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,95 +69,93 @@ const App = () => (
               <BackgroundInitializer />
             {/* OrderNotificationSystem now only loads in admin panel */}
             {/* ButtonDebugger removed - no more debug overlays */}
-            <UpdateNotification />
             <Toaster />
             <Sonner />
             <BrowserRouter>
-            <Routes>
-              <Route path="/" element={
-                <ErrorBoundary componentName="Index">
-                  <Index />
-                </ErrorBoundary>
-              } />
-              <Route path="/admin" element={
-                <ErrorBoundary componentName="Admin">
-                  <Admin />
-                </ErrorBoundary>
-              } />
+              <Suspense fallback={<RouteLoadingSpinner />}>
+                <Routes>
+                  <Route path="/" element={
+                    <ErrorBoundary componentName="Index">
+                      <Index />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/admin" element={
+                    <ErrorBoundary componentName="Admin">
+                      <Admin />
+                    </ErrorBoundary>
+                  } />
 
-              <Route path="/ordini" element={
-                <ErrorBoundary componentName="Ordini">
-                  <Ordini />
-                </ErrorBoundary>
-              } />
+                  <Route path="/ordini" element={
+                    <ErrorBoundary componentName="Ordini">
+                      <Ordini />
+                    </ErrorBoundary>
+                  } />
 
-              <Route path="/orders" element={
-                <ErrorBoundary componentName="OrderDashboard">
-                  <OrderDashboardPro />
-                </ErrorBoundary>
-              } />
+                  <Route path="/orders" element={
+                    <ErrorBoundary componentName="OrderDashboard">
+                      <OrderDashboardPro />
+                    </ErrorBoundary>
+                  } />
 
-              <Route path="/track-order" element={
-                <ErrorBoundary componentName="OrderTracking">
-                  <OrderTracking />
-                </ErrorBoundary>
-              } />
+                  <Route path="/track-order" element={
+                    <ErrorBoundary componentName="OrderTracking">
+                      <OrderTracking />
+                    </ErrorBoundary>
+                  } />
 
-              <Route path="/menu" element={
-                <ErrorBoundary componentName="MenuPage">
-                  <MenuPage />
-                </ErrorBoundary>
-              } />
-              <Route path="/payment/success" element={
-                <ErrorBoundary componentName="PaymentSuccess">
-                  <PaymentSuccess />
-                </ErrorBoundary>
-              } />
-              <Route path="/payment/cancel" element={
-                <ErrorBoundary componentName="PaymentCancel">
-                  <PaymentCancel />
-                </ErrorBoundary>
-              } />
-              {/* Database setup route removed to prevent accidental initialization */}
-              <Route path="/stripe-test" element={
-                <div className="min-h-screen bg-gray-50 py-12">
-                  <ErrorBoundary componentName="SimpleStripeTest">
-                    <SimpleStripeTest />
-                  </ErrorBoundary>
-                </div>
-              } />
+                  <Route path="/menu" element={
+                    <ErrorBoundary componentName="MenuPage">
+                      <MenuPage />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/payment/success" element={
+                    <ErrorBoundary componentName="PaymentSuccess">
+                      <PaymentSuccess />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/payment/cancel" element={
+                    <ErrorBoundary componentName="PaymentCancel">
+                      <PaymentCancel />
+                    </ErrorBoundary>
+                  } />
+                  {/* Database setup route removed to prevent accidental initialization */}
+                  <Route path="/stripe-test" element={
+                    <div className="min-h-screen bg-gray-50 py-12">
+                      <ErrorBoundary componentName="SimpleStripeTest">
+                        <SimpleStripeTest />
+                      </ErrorBoundary>
+                    </div>
+                  } />
 
-              <Route path="/auth-test" element={
-                <ErrorBoundary componentName="AuthTest">
-                  <AuthTest />
-                </ErrorBoundary>
-              } />
-              <Route path="/auth-helper" element={
-                <ErrorBoundary componentName="AuthTestHelper">
-                  <AuthTestHelper />
-                </ErrorBoundary>
-              } />
-              <Route path="/auth-separation-test" element={
-                <ErrorBoundary componentName="AuthSeparationTest">
-                  <AuthSeparationTest />
-                </ErrorBoundary>
-              } />
-              <Route path="/my-orders" element={
-                <ErrorBoundary componentName="MyOrders">
-                  <MyOrders />
-                </ErrorBoundary>
-              } />
-              <Route path="/test-components" element={
-                <ErrorBoundary componentName="ComponentLoadingTest">
-                  <ComponentLoadingTest />
-                </ErrorBoundary>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-
-            {/* Global Order Tracker removed - order tracking works in hero section */}
-
-          </BrowserRouter>
+                  <Route path="/auth-test" element={
+                    <ErrorBoundary componentName="AuthTest">
+                      <AuthTest />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/auth-helper" element={
+                    <ErrorBoundary componentName="AuthTestHelper">
+                      <AuthTestHelper />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/auth-separation-test" element={
+                    <ErrorBoundary componentName="AuthSeparationTest">
+                      <AuthSeparationTest />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/my-orders" element={
+                    <ErrorBoundary componentName="MyOrders">
+                      <MyOrders />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="/test-components" element={
+                    <ErrorBoundary componentName="ComponentLoadingTest">
+                      <ComponentLoadingTest />
+                    </ErrorBoundary>
+                  } />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
           {/* <DiagnosticInfo /> */}
               </SimpleCartProvider>
             </BusinessHoursProvider>

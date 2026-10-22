@@ -81,7 +81,7 @@ const About = () => {
       .channel(channelName)
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'settings',
         filter: 'key=eq.chiSiamoImage'
       }, async (payload) => {
@@ -93,7 +93,7 @@ const About = () => {
       })
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'settings',
         filter: 'key=eq.chiSiamoContent'
       }, async (payload) => {
@@ -307,7 +307,9 @@ const About = () => {
                 <img
                   src={chiSiamoImage.image}
                   alt={chiSiamoImage.alt}
-                  className="rounded-xl"
+                  className="rounded-xl w-full h-auto object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               {/* REMOVED: The overlay panel that was here */}

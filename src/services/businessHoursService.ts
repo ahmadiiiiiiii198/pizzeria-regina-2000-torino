@@ -38,9 +38,12 @@ class BusinessHoursService {
   // Create a separate, non-authenticated Supabase client for business hours
   // This ensures business hours work regardless of user authentication state
   private readonly publicSupabase = createClient(
-    'https://sixnfemtvmighstbgrbd.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpeG5mZW10dm1pZ2hzdGJncmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyOTIxODQsImV4cCI6MjA2Njg2ODE4NH0.eOV2DYqcMV1rbmw8wa6xB7MBSpXaoUhnSyuv_j5mg4I',
+    import.meta.env.VITE_SUPABASE_URL || 'https://jncuwwavffepnajxvjxq.supabase.co',
+    import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpuY3V3d2F2ZmZlcG5hanh2anhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4MzMxMjUsImV4cCI6MjA3NTQwOTEyNX0.wDlEZbpy1rfAk8GtzuqB28qINkAG3GbqMxVZmW85hzo',
     {
+      db: {
+        schema: 'regina'
+      },
       auth: {
         persistSession: false, // Don't persist sessions for this client
         autoRefreshToken: false, // Don't auto-refresh tokens

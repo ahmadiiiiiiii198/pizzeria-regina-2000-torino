@@ -163,7 +163,7 @@ const MyOrders: React.FC = () => {
       .channel(channelName)
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {

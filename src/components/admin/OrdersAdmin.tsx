@@ -345,7 +345,7 @@ const OrdersAdmin = () => {
     const ordersSubscription = supabase
       .channel(channelName)
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
+        { event: 'INSERT', schema: 'regina', table: 'orders' },
         (payload) => {
           console.log('🚨 [OrdersAdmin] NEW ORDER DETECTED!', payload);
           console.log('🚨 [OrdersAdmin] Order details:', JSON.stringify(payload.new, null, 2));
@@ -391,7 +391,7 @@ const OrdersAdmin = () => {
         }
       )
       .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        { event: 'UPDATE', schema: 'regina', table: 'orders' },
         (payload) => {
           console.log('Order updated:', payload);
           // Update specific order in state instead of reloading all
@@ -404,7 +404,7 @@ const OrdersAdmin = () => {
         }
       )
       .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'orders' },
+        { event: 'DELETE', schema: 'regina', table: 'orders' },
         (payload) => {
           console.log('Order deleted:', payload);
           // Remove deleted order from state instead of reloading all
@@ -434,7 +434,7 @@ const OrdersAdmin = () => {
     const orderItemsSubscription = supabase
       .channel(orderItemsChannelName)
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'order_items' },
+        { event: '*', schema: 'regina', table: 'order_items' },
         (payload) => {
           console.log('📦 [OrdersAdmin] Order items change detected:', payload);
           // Only reload orders if it's a new item or significant change

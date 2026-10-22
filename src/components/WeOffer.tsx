@@ -68,7 +68,7 @@ const WeOffer = () => {
           .channel(channelName)
           .on('postgres_changes', {
             event: 'UPDATE',
-            schema: 'public',
+            schema: 'regina',
             table: 'settings',
             filter: 'key=eq.weOfferContent'
           }, async (payload) => {
@@ -107,7 +107,7 @@ const WeOffer = () => {
   console.log('🍕 [WeOffer] Rendering with content:', offerContent);
 
   return (
-    <section className="py-20 bg-gradient-to-br from-pizza-cream via-white to-pizza-orange/10 relative overflow-hidden">
+    <section id="we-offer" className="py-20 scroll-mt-20 bg-gradient-to-br from-pizza-cream via-white to-pizza-orange/10 relative overflow-hidden">
       {/* Pizza-themed background decorations */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-10 left-10 w-32 h-32 bg-pizza-red rounded-full blur-xl animate-pulse"></div>
@@ -150,20 +150,34 @@ const WeOffer = () => {
               className={`group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden hover-lift animate-fade-in-up`}
               style={{ animationDelay: `${index * 200}ms` }}
             >
-              {/* Image Container */}
-              <div className="relative h-64 overflow-hidden">
+              {/* Image Container - fully visible without cropping */}
+              <div className="relative h-80 sm:h-96 md:h-[420px] overflow-hidden bg-stone-900/5 flex items-center justify-center">
                 {!imagesLoaded[offer.id] && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-pizza-orange/20 to-pizza-red/20 animate-pulse flex items-center justify-center">
+                  <div className="absolute inset-0 bg-gradient-to-br from-pizza-orange/20 to-pizza-red/20 animate-pulse flex items-center justify-center z-10">
                     <Pizza className="text-pizza-orange animate-pizza-spin" size={48} />
                   </div>
                 )}
 
+                {/* Ambient blurred background matching the photo */}
+                <img
+                  src={offer.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-40 select-none pointer-events-none"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div className="absolute inset-0 bg-black/10 pointer-events-none z-10"></div>
+
+                {/* Foreground image - 100% visible, no parts cut off */}
                 <img
                   src={offer.image}
                   alt={offer.title}
-                  className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${
+                  className={`relative z-10 w-full h-full object-contain p-2 transition-all duration-700 group-hover:scale-105 ${
                     imagesLoaded[offer.id] ? 'opacity-100' : 'opacity-0'
                   }`}
+                  loading="lazy"
+                  decoding="async"
                   onLoad={() => handleImageLoad(offer.id)}
                   onError={(e) => {
                     console.error(`❌ [WeOffer] Image failed to load for offer ${offer.id}`);
@@ -171,10 +185,8 @@ const WeOffer = () => {
                   }}
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-
                 {/* Badge */}
-                <div className="absolute top-4 left-4 bg-pizza-red text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg animate-bounce-gentle">
+                <div className="absolute top-4 left-4 z-20 bg-pizza-red text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg animate-bounce-gentle">
                   <div className="flex items-center space-x-1">
                     <Star className="w-3 h-3" />
                     <span>{offer.badge}</span>

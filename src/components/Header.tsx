@@ -18,8 +18,8 @@ const Header = () => {
 
   // Use static logo settings to avoid hook issues
   const logoSettings = {
-    logoUrl: "/flegrea-logo.png?v=" + Date.now(),
-    altText: "Flegrea Pizzeria Logo",
+    logoUrl: "/logo.png?v=" + Date.now(),
+    altText: "Pizzeria Regina 2000 Logo",
   };
 
   const [logoLoaded, setLogoLoaded] = useState(false);
@@ -34,10 +34,10 @@ const Header = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-8 animate-fade-in-left">
               <div className="flex items-center space-x-3 logo-container hover-scale">
-                {/* Direct logo display for testing */}
+                {/* Direct logo display */}
                 <img
                   src={logoImage}
-                  alt="Flegrea Pizzeria Logo"
+                  alt="Pizzeria Regina 2000 Logo"
                   className="h-12 w-auto transition-all duration-300 hover:scale-105"
                   onLoad={() => console.log('✅ Logo loaded successfully')}
                   onError={(e) => {
@@ -48,8 +48,8 @@ const Header = () => {
                 />
 
                 {/* Fallback text logo */}
-                <div className="h-12 hidden items-center px-4 bg-gradient-to-r from-flegrea-burgundy to-flegrea-deep-red text-white rounded-xl font-fredoka font-bold text-lg shadow-lg">
-                  🍕 Flegrea
+                <div className="h-12 hidden items-center px-4 bg-gradient-to-r from-red-700 to-orange-600 text-white rounded-xl font-fredoka font-bold text-lg shadow-lg">
+                  🍕 Regina 2000
                 </div>
               </div>
               <nav className="hidden md:flex space-x-8">

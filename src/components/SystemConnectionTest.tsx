@@ -156,7 +156,7 @@ const SystemConnectionTest = () => {
       const testChannel = supabase
         .channel('system_test')
         .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'orders' },
+          { event: 'INSERT', schema: 'regina', table: 'orders' },
           () => {
             addResult('Real-time System', 'success', '✅ Real-time subscription working');
           }

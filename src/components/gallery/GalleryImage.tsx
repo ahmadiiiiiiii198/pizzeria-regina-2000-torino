@@ -107,7 +107,8 @@ const GalleryImage = ({ src, alt, className = "", onLoad, onError }: GalleryImag
             src={imageSrc}
             alt={alt || "Gallery Image"}
             className={`w-full h-full object-contain sm:object-cover transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-            loading="eager"
+            loading="lazy"
+            decoding="async"
             onError={handleImageError}
             onLoad={handleImageLoaded}
           />

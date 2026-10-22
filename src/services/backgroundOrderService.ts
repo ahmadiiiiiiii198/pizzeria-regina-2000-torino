@@ -153,7 +153,7 @@ class BackgroundOrderService {
         .channel('background-order-monitoring')
         .on('postgres_changes', {
           event: 'INSERT',
-          schema: 'public',
+          schema: 'regina',
           table: 'orders'
         }, (payload) => {
           console.log('📡 [BackgroundOrder] New order detected via real-time:', payload);

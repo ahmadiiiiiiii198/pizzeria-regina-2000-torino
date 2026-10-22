@@ -612,7 +612,7 @@ const OrderNotificationSystem = () => {
       const subscription = supabase
         .channel('order_notifications')
         .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'order_notifications' },
+          { event: 'INSERT', schema: 'regina', table: 'order_notifications' },
           () => {
             console.log('📡 [OrderNotification] New notification received via real-time');
             fetchNotifications();

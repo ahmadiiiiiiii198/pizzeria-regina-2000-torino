@@ -154,7 +154,7 @@ export const BusinessHoursProvider: React.FC<BusinessHoursProviderProps> = ({ ch
       .channel(channelName)
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'settings',
         filter: 'key=eq.businessHours'
       }, async (payload) => {

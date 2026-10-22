@@ -230,7 +230,7 @@ const OrderTracking: React.FC = () => {
       .channel(channelName)
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders',
         filter: `id=eq.${order.id}`
       }, (payload) => {

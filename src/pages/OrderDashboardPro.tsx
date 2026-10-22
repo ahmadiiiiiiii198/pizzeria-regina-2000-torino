@@ -491,7 +491,7 @@ const OrderDashboardPro: React.FC = () => {
       .channel('orders-realtime-channel-' + Date.now()) // Unique channel name
       .on('postgres_changes', {
         event: 'INSERT',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders'
       }, (payload) => {
         console.log('🚨 NEW ORDER DETECTED!', payload);
@@ -545,7 +545,7 @@ const OrderDashboardPro: React.FC = () => {
       })
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders'
       }, (payload) => {
         console.log('📝 Order updated:', payload);
@@ -589,7 +589,7 @@ const OrderDashboardPro: React.FC = () => {
       })
       .on('postgres_changes', {
         event: 'DELETE',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders'
       }, (payload) => {
         console.log('🗑️ Order deleted:', payload);
@@ -618,7 +618,7 @@ const OrderDashboardPro: React.FC = () => {
       .channel('notifications-realtime-channel-' + Date.now()) // Unique channel name
       .on('postgres_changes', {
         event: 'INSERT',
-        schema: 'public',
+        schema: 'regina',
         table: 'order_notifications'
       }, (payload) => {
         console.log('🔔 New notification:', payload);
@@ -630,7 +630,7 @@ const OrderDashboardPro: React.FC = () => {
       })
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'order_notifications'
       }, (payload) => {
         console.log('📝 Notification updated:', payload);

@@ -298,7 +298,7 @@ export const useUserOrders = (): UseUserOrdersReturn => {
       .channel(channelName)
       .on('postgres_changes', {
         event: 'UPDATE',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {
@@ -321,7 +321,7 @@ export const useUserOrders = (): UseUserOrdersReturn => {
       })
       .on('postgres_changes', {
         event: 'INSERT',
-        schema: 'public',
+        schema: 'regina',
         table: 'orders',
         filter: `user_id=eq.${user.id}`
       }, (payload) => {

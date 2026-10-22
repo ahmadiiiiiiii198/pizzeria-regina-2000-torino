@@ -135,6 +135,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
           src={productImage}
           alt={productName}
           className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = '/placeholder.svg';

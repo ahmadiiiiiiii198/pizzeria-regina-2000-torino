@@ -19,6 +19,10 @@ const Hero = () => {
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
 
+  useEffect(() => {
+    setHeroImageLoaded(false);
+  }, [heroContent.heroImage, heroContent.backgroundImage]);
+
   // Combine loading states
   const isLoading = heroLoading || logoLoading || hoursLoading;
 
@@ -234,31 +238,35 @@ const Hero = () => {
             }}
           >
             <div
-              className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-white via-red-50 to-orange-50 p-8 hover-lift"
+              className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-white via-red-50 to-orange-50 p-4 sm:p-6 md:p-8 hover-lift flex items-center justify-center"
               style={{
-                minHeight: '550px'
+                minHeight: '520px'
               }}
             >
               {/* Hero image loading placeholder */}
               {!heroImageLoaded && (
-                <div className="absolute inset-8 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 animate-pulse flex items-center justify-center">
+                <div className="absolute inset-4 sm:inset-6 md:inset-8 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 animate-pulse flex items-center justify-center z-10">
                   <Pizza className="text-red-400 animate-float" size={64} />
                   <div className="ml-4 text-red-600 font-semibold">
                     Caricamento immagine...
                   </div>
                 </div>
               )}
+              {/* Ambient blurred backdrop so any aspect ratio looks complete */}
               <img
                 src={heroContent.heroImage || heroContent.backgroundImage}
-                alt="Delicious authentic Italian pizza"
-                className={`w-full h-96 md:h-[500px] lg:h-[600px] object-cover rounded-2xl transition-opacity duration-700 hover-scale hero-main-image ${
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover blur-2xl scale-125 opacity-30 select-none pointer-events-none"
+              />
+              <img
+                key={heroContent.heroImage || heroContent.backgroundImage}
+                src={heroContent.heroImage || heroContent.backgroundImage}
+                alt="Pizzeria Regina 2000"
+                className={`relative z-10 w-full h-auto max-h-[500px] object-contain rounded-2xl transition-all duration-700 hover-scale hero-main-image ${
                   heroImageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 style={{
-                  position: 'relative',
-                  zIndex: 10,
-                  height: '500px',
-                  minHeight: '400px',
                   maxWidth: '100%',
                   // @ts-ignore - iOS optimization properties
                   WebkitBackfaceVisibility: 'hidden',
@@ -284,11 +292,7 @@ const Hero = () => {
                   }
                 }}
               />
-              <div className="absolute inset-8 rounded-2xl bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
-
-
-
-
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none z-10"></div>
             </div>
           </div>
         </div>

@@ -68,7 +68,7 @@ const OrderManagement = () => {
         'postgres_changes',
         {
           event: 'INSERT',
-          schema: 'public',
+          schema: 'regina',
           table: 'orders'
         },
         (payload) => {
@@ -87,7 +87,7 @@ const OrderManagement = () => {
         'postgres_changes',
         {
           event: 'UPDATE',
-          schema: 'public',
+          schema: 'regina',
           table: 'orders'
         },
         () => {
@@ -98,7 +98,7 @@ const OrderManagement = () => {
         'postgres_changes',
         {
           event: 'DELETE',
-          schema: 'public',
+          schema: 'regina',
           table: 'orders'
         },
         (payload) => {

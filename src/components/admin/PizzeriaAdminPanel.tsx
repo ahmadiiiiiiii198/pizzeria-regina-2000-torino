@@ -268,10 +268,10 @@ const PizzeriaAdminPanel = () => {
                   Pannello Admin
                 </h1>
                 <p className="text-xl text-gray-600 font-semibold">Pizzeria Regina 2000</p>
-                <p className="text-sm text-gray-500 flex items-center mt-1">
+                <div className="text-sm text-gray-500 flex items-center mt-1">
                   <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
                   Sistema attivo e funzionante
-                </p>
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-6">
