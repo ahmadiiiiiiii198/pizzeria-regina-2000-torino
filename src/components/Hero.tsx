@@ -23,6 +23,10 @@ const Hero = () => {
     setHeroImageLoaded(false);
   }, [heroContent.heroImage, heroContent.backgroundImage]);
 
+  useEffect(() => {
+    setLogoImageLoaded(false);
+  }, [logoSettings.logoUrl]);
+
   // Combine loading states
   const isLoading = heroLoading || logoLoading || hoursLoading;
 
@@ -191,40 +195,49 @@ const Hero = () => {
       <div className="container mx-auto px-4 pt-32 pb-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center min-h-[80vh] hero-main-grid">
 
-          {/* Left Column - Logo and Text */}
-          <div className="text-center lg:text-left space-y-8 animate-fade-in-left">
-            <div className="flex justify-center lg:justify-start mb-8">
-              <div className="relative">
-                {/* Logo loading placeholder */}
-                {!logoImageLoaded && (
-                  <div className="h-96 md:h-[480px] w-96 bg-gradient-to-br from-red-100 to-orange-100 rounded-3xl animate-pulse flex items-center justify-center">
-                    <Pizza className="text-red-400 animate-float" size={64} />
+          {/* Left Column - Brand Logo Card */}
+          <div className="relative animate-fade-in-left">
+            <div
+              className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-white via-red-50 to-orange-50 p-4 sm:p-6 md:p-8 hover-lift flex items-center justify-center"
+              style={{
+                minHeight: '520px'
+              }}
+            >
+              {/* Logo loading placeholder - ABSOLUTE so it doesn't push the image down */}
+              {!logoImageLoaded && (
+                <div className="absolute inset-4 sm:inset-6 md:inset-8 rounded-2xl bg-gradient-to-br from-red-100 to-orange-100 animate-pulse flex items-center justify-center z-10">
+                  <Pizza className="text-red-400 animate-float" size={64} />
+                  <div className="ml-4 text-red-600 font-semibold">
+                    Caricamento...
                   </div>
-                )}
-
-                {/* Main logo image */}
-                {logoSettings.logoUrl && (
-                  <img
-                    src={logoSettings.logoUrl}
-                    alt={logoSettings.altText}
-                    className={`h-96 md:h-[480px] w-auto object-contain drop-shadow-2xl transition-all duration-700 hover-scale animate-scale-in ${
-                      logoImageLoaded ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    onLoad={() => {
-                      setLogoImageLoaded(true);
-                    }}
-                    onError={(e) => {
-                      setLogoImageLoaded(true);
-                    }}
-                  />
-                )}
-
-                {/* Fallback text if logo fails */}
-                <div className="hidden text-center">
-                  <Pizza className="h-24 w-24 text-red-500 mx-auto mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-800 font-playfair">Pizzeria Regina 2000</h2>
                 </div>
-              </div>
+              )}
+
+              {/* Main logo image */}
+              {logoSettings.logoUrl && (
+                <img
+                  ref={(img) => {
+                    if (img && img.complete && !logoImageLoaded) {
+                      setLogoImageLoaded(true);
+                    }
+                  }}
+                  src={logoSettings.logoUrl}
+                  alt={logoSettings.altText}
+                  className={`relative z-10 w-full h-auto max-h-[500px] object-contain drop-shadow-2xl transition-all duration-700 hover-scale ${
+                    logoImageLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => {
+                    setLogoImageLoaded(true);
+                  }}
+                  onError={() => {
+                    setLogoImageLoaded(true);
+                  }}
+                />
+              )}
+
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none z-10"></div>
             </div>
           </div>
 
