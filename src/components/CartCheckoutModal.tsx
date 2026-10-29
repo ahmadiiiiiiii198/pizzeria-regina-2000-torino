@@ -191,31 +191,19 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
       throw new Error(`Errore nella creazione dell'ordine: ${orderError.message}`);
     }
 
-    // Create order items
+    // Create order items matching database schema
     const orderItems = cartItems.map(item => ({
       order_id: order.id,
       product_id: item.product.id,
       product_name: item.product.name,
       product_price: item.product.price,
+      price: item.product.price,
       quantity: item.quantity,
       subtotal: item.product.price * item.quantity,
-      unit_price: item.product.price,
-      special_requests: item.specialRequests
+      metadata: {
+        special_requests: item.specialRequests || null
+      }
     }));
-
-    // Add delivery fee as separate item if applicable
-    if (deliveryFee > 0) {
-      orderItems.push({
-        order_id: order.id,
-        product_id: null, // No product ID for delivery fee
-        product_name: 'Delivery Fee',
-        product_price: deliveryFee,
-        quantity: 1,
-        subtotal: deliveryFee,
-        unit_price: deliveryFee,
-        special_requests: `Delivery to: ${addressValidation.formattedAddress}`
-      });
-    }
 
     console.log('🔍 Inserting order items:', orderItems);
     const { error: itemsError } = await supabase
@@ -229,16 +217,15 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
     }
     console.log('✅ Order items created successfully');
 
-    // Create notification
+    // Create notification with correct schema
     await supabase
       .from('order_notifications')
       .insert({
         order_id: order.id,
-        notification_type: 'new_order',
+        type: 'new_order',
         title: 'Nuovo Ordine!',
         message: `New cart order received from ${customerData.customerName} - ${cartItems.length} items - €${finalTotal.toFixed(2)}`,
-        is_read: false,
-        is_acknowledged: false
+        is_read: false
       });
 
     // 🎯 AUTOMATICALLY SAVE ORDER FOR TRACKING
@@ -579,55 +566,12 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
           </div>
 
           {/* Payment Options */}
-          <Tabs defaultValue="stripe" className="w-full">
+          <Tabs defaultValue="later" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="later">Paga alla Consegna</TabsTrigger>
               <TabsTrigger value="stripe">Paga Subito</TabsTrigger>
-              <TabsTrigger value="later">Paga Dopo</TabsTrigger>
             </TabsList>
-            
-            <TabsContent value="stripe" className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-2">Pagamento Sicuro con Stripe</h4>
-                <p className="text-blue-700 text-sm">
-                  Paga subito con carta di credito o debito. Il tuo ordine sarà confermato immediatamente.
-                </p>
-              </div>
-              
-              <Button
-                onClick={async () => {
-                  setIsSubmitting(true);
-                  try {
-                    await createStripeOrder();
-                    clearCart();
-                    onClose();
-                  } catch (error) {
-                    console.error('Stripe order error:', error);
-                    toast({
-                      title: 'Errore nel pagamento',
-                      description: error instanceof Error ? error.message : 'Si è verificato un errore',
-                      variant: 'destructive'
-                    });
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
-                disabled={!isFormValid() || isSubmitting}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Elaborazione...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Procedi al Pagamento
-                  </>
-                )}
-              </Button>
-            </TabsContent>
-            
+
             <TabsContent value="later" className="space-y-4">
               <div className="bg-amber-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-amber-800 mb-2">Paga alla Consegna</h4>
@@ -671,6 +615,64 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
                   }
                 }}
                 disabled={!isFormValid() || isSubmitting}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Elaborazione...
+                  </>
+                ) : (
+                  <>
+                    Conferma Ordine - Paga alla Consegna
+                  </>
+                )}
+              </Button>
+            </TabsContent>
+            
+            <TabsContent value="stripe" className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">Pagamento Sicuro con Carta</h4>
+                <p className="text-blue-700 text-sm">
+                  Paga subito online. (Se non disponibile, utilizza l'opzione "Paga alla Consegna").
+                </p>
+              </div>
+              
+              <Button
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await createStripeOrder();
+                    clearCart();
+                    onClose();
+                  } catch (error) {
+                    console.error('Stripe order error:', error);
+                    toast({
+                      title: 'Errore nel pagamento',
+                      description: error instanceof Error ? error.message : 'Si è verificato un errore',
+                      variant: 'destructive'
+                    });
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={!isFormValid() || isSubmitting}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Elaborazione...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Procedi al Pagamento
+                  </>
+                )}
+              </Button>
+            </TabsContent>
+          </Tabs>
                 className="w-full bg-amber-600 hover:bg-amber-700"
               >
                 {isSubmitting ? (

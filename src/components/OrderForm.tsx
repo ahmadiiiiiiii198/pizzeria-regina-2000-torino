@@ -165,9 +165,9 @@ const OrderForm = () => {
           total_amount: estimatedPrice,
           status: 'confirmed', // Orders are automatically confirmed
           payment_status: 'pending',
-          payment_method: 'stripe',
-          user_id: isAuthenticated && user ? user.id : null, // 🎯 ASSOCIATE WITH USER IF AUTHENTICATED
+          payment_method: 'cash_on_delivery',
           metadata: {
+            userId: isAuthenticated && user ? user.id : null,
             billing_address: billingAddress,
             // 🎯 CLIENT IDENTIFICATION FOR ORDER TRACKING
             clientId: clientIdentity.clientId,

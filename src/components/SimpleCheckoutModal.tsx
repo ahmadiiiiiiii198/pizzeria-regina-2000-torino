@@ -701,53 +701,17 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
               </div>
             )}
 
-            <Tabs defaultValue="stripe" className="w-full">
+            <Tabs defaultValue="later" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="stripe">Paga Ora</TabsTrigger>
                 <TabsTrigger value="later">Paga alla Consegna</TabsTrigger>
+                <TabsTrigger value="stripe">Paga Ora (Carta)</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="stripe" className="space-y-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-800 mb-2">Pagamento Immediato</h4>
-                  <p className="text-blue-700 text-sm">
-                    Paga subito con carta di credito tramite Stripe. Sicuro e veloce.
-                  </p>
-                </div>
-
-                <Button
-                  onClick={async () => {
-                    setIsSubmitting(true);
-                    try {
-                      await createStripeOrder();
-                    } catch (error) {
-                      console.error('Stripe payment error:', error);
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
-                  disabled={!isFormValid() || isSubmitting}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creazione ordine...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Paga €{(calculateTotal() || 0).toFixed(2)}
-                    </>
-                  )}
-                </Button>
-              </TabsContent>
 
               <TabsContent value="later" className="space-y-4">
                 <div className="bg-amber-50 p-4 rounded-lg">
                   <h4 className="font-semibold text-amber-800 mb-2">Paga alla Consegna</h4>
                   <p className="text-amber-700 text-sm">
-                    Conferma l'ordine ora e paga quando ricevi i prodotti. Ti contatteremo per confermare i dettagli.
+                    Conferma l'ordine ora e paga quando ricevi i prodotti caldi e freschi.
                   </p>
                 </div>
 
@@ -774,7 +738,42 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
                     }
                   }}
                   disabled={!isFormValid() || isSubmitting}
-                  className="w-full bg-amber-600 hover:bg-amber-700"
+                  className="w-full bg-amber-600 hover:bg-amber-700 font-semibold py-3"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Invio ordine...
+                    </>
+                  ) : (
+                    <>
+                      Conferma Ordine - €{(calculateTotal() || 0).toFixed(2)}
+                    </>
+                  )}
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="stripe" className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">Pagamento Immediato con Carta</h4>
+                  <p className="text-blue-700 text-sm">
+                    Paga subito con carta di credito. (Se non disponibile, seleziona "Paga alla Consegna").
+                  </p>
+                </div>
+
+                <Button
+                  onClick={async () => {
+                    setIsSubmitting(true);
+                    try {
+                      await createStripeOrder();
+                    } catch (error) {
+                      console.error('Stripe payment error:', error);
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  disabled={!isFormValid() || isSubmitting}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   {isSubmitting ? (
                     <>
@@ -782,7 +781,10 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
                       Creazione ordine...
                     </>
                   ) : (
-                    'Conferma Ordine'
+                    <>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Paga Ora €{(calculateTotal() || 0).toFixed(2)}
+                    </>
                   )}
                 </Button>
               </TabsContent>

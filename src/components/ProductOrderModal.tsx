@@ -716,20 +716,97 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
                 Address validated: {addressValidation?.isValid && addressValidation?.isWithinZone ? 'Yes' : 'No'}
               </div>
 
-              <Tabs defaultValue="stripe" className="w-full">
+              <Tabs defaultValue="later" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-4">
+                  <TabsTrigger value="later">Paga alla Consegna</TabsTrigger>
                   <TabsTrigger value="stripe" className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
-                    Paga Ora (Stripe)
+                    Paga con Carta
                   </TabsTrigger>
-                  <TabsTrigger value="later">Paga Dopo</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="later" className="space-y-4">
+                  <div className="bg-amber-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 mb-2">Paga alla Consegna</h4>
+                    <p className="text-amber-700 text-sm">
+                      Paga in contanti quando ricevi i tuoi prodotti caldi e freschi.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={onClose}
+                      className="flex-1"
+                    >
+                      Annulla
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={isSubmitting || !orderData.customerName || !orderData.customerEmail || !orderData.deliveryAddress ||
+                               !addressValidation?.isValid || !addressValidation?.isWithinZone}
+                      onClick={async () => {
+                        setIsSubmitting(true);
+                        try {
+                          const order = await createOrder();
+                          if (order) {
+                            // Create notification for pay-later orders
+                            await supabase
+                              .from('order_notifications')
+                              .insert({
+                                order_id: order.id,
+                                type: 'new_order',
+                                title: 'Nuovo Ordine!',
+                                message: `Nuovo ordine da ${orderData.customerName}`,
+                                is_read: false
+                              });
+
+                            toast({
+                              title: 'Ordine Inviato con Successo! 🎉',
+                              description: `Il tuo ordine #${order.order_number} è stato ricevuto. Ti contatteremo presto per confermare i dettagli.`,
+                            });
+
+                            // Reset form and close modal
+                            setOrderData({
+                              customerName: '',
+                              customerEmail: '',
+                              customerPhone: '',
+                              quantity: 1,
+                              specialRequests: '',
+                              deliveryAddress: ''
+                            });
+                            onClose();
+                          }
+                        } catch (error) {
+                          toast({
+                            title: 'Errore nell\'Ordine',
+                            description: error instanceof Error ? error.message : 'Si è verificato un errore',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      }}
+                      className="flex-1 bg-amber-600 hover:bg-amber-700"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Invio ordine...
+                        </>
+                      ) : (
+                        'Conferma Ordine'
+                      )}
+                    </Button>
+                  </div>
+                </TabsContent>
 
                 <TabsContent value="stripe" className="space-y-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-800 mb-2">Pagamento Sicuro con Stripe</h4>
+                    <h4 className="font-semibold text-blue-800 mb-2">Pagamento Sicuro con Carta</h4>
                     <p className="text-blue-700 text-sm">
-                      Paga subito con carta di credito o debito. Il tuo ordine sarà confermato immediatamente.
+                      Paga subito online. (Se non disponibile, seleziona "Paga alla Consegna").
                     </p>
                   </div>
 
@@ -774,60 +851,6 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
                     </div>
                   )}
                 </TabsContent>
-
-                <TabsContent value="later" className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-800 mb-2">Ordina Ora, Paga Dopo</h4>
-                    <p className="text-gray-700 text-sm">
-                      Il tuo ordine sarà salvato e ti contatteremo per confermare i dettagli e il pagamento.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={onClose}
-                      className="flex-1"
-                    >
-                      Annulla
-                    </Button>
-                    <Button
-                      type="button"
-                      disabled={isSubmitting || !orderData.customerName || !orderData.customerEmail || !orderData.deliveryAddress ||
-                               !addressValidation?.isValid || !addressValidation?.isWithinZone}
-                      onClick={async () => {
-                        setIsSubmitting(true);
-                        try {
-                          const order = await createOrder();
-                          if (order) {
-                            // Create notification for pay-later orders
-                            await supabase
-                              .from('order_notifications')
-                              .insert({
-                                order_id: order.id,
-                                message: `New order received from ${orderData.customerName}`,
-                                is_read: false
-                              });
-
-                            toast({
-                              title: 'Ordine Inviato con Successo! 🎉',
-                              description: `Il tuo ordine #${order.order_number} è stato ricevuto. Ti contatteremo presto per confermare i dettagli.`,
-                            });
-
-                            // Reset form and close modal
-                            setOrderData({
-                              customerName: '',
-                              customerEmail: '',
-                              customerPhone: '',
-                              quantity: 1,
-                              specialRequests: '',
-                              deliveryAddress: ''
-                            });
-                            onClose();
-                          }
-                        } catch (error) {
-                          toast({
                             title: 'Errore nell\'invio dell\'ordine',
                             description: error.message || 'Riprova o contattaci direttamente.',
                             variant: 'destructive',
