@@ -1,37 +1,46 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, Suspense, lazy, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
+  LayoutDashboard,
   Pizza,
-  Settings,
-  Image,
-  Video,
-  MessageSquare,
-  Bell,
-  Users,
-  ShoppingCart,
-  BarChart3,
-  MapPin,
-  Palette,
+  PackageCheck,
   Globe,
-  Menu as MenuIcon,
+  Sparkles,
+  BadgePercent,
+  Users,
+  Palette,
+  Images,
+  Video,
+  MessageSquareQuote,
+  Megaphone,
+  Settings,
+  Clock,
+  Truck,
+  CreditCard,
+  Bell,
   Wrench,
   Database,
-  Plus,
-  Eye,
-  Clock,
-  CreditCard,
+  ExternalLink,
+  LogOut,
+  ShoppingCart,
+  Menu as MenuIcon,
+  X,
+  Search,
+  ChevronRight,
+  TrendingUp,
+  Store,
+  ShieldCheck,
   Loader2,
-  Package,
+  Activity,
   Volume2
 } from 'lucide-react';
 
-// OrderNotificationSystem removed from main admin panel - only in separate ordini section
-
-// Lazy load admin components to prevent initialization errors
+// Lazy-load individual modules for optimal performance
 const ProductsAdmin = lazy(() => import('./ProductsAdmin').catch(() => ({ default: () => <div>Error loading ProductsAdmin</div> })));
-// OrdersAdmin removed - only available in separate ordini section
 const ContentEditor = lazy(() => import('./ContentEditor').catch(() => ({ default: () => <div>Error loading ContentEditor</div> })));
 const HeroContentEditor = lazy(() => import('./HeroContentEditor').catch(() => ({ default: () => <div>Error loading HeroContentEditor</div> })));
 const LogoEditor = lazy(() => import('./LogoEditor').catch(() => ({ default: () => <div>Error loading LogoEditor</div> })));
@@ -60,1031 +69,1158 @@ const ProductsSchemaFixer = lazy(() => import('../ProductsSchemaFixer').catch(()
 const FrontendConnectionTester = lazy(() => import('../FrontendConnectionTester').catch(() => ({ default: () => <div>Error loading FrontendConnectionTester</div> })));
 const BulkStockManager = lazy(() => import('./BulkStockManager').catch(() => ({ default: () => <div>Error loading BulkStockManager</div> })));
 
-// Loading component
 const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-8">
-    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-    <span className="ml-2 text-gray-600">Caricamento...</span>
+  <div className="flex flex-col items-center justify-center p-12 text-slate-500">
+    <Loader2 className="h-8 w-8 animate-spin text-red-600 mb-3" />
+    <span className="text-sm font-medium">Caricamento modulo in corso...</span>
   </div>
 );
 
-const PizzeriaAdminPanel = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isReady, setIsReady] = useState(false);
+// Navigation group type definitions
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  badge?: string;
+  description: string;
+}
 
-  // Add initialization logging with delay
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Panoramica',
+    items: [
+      {
+        id: 'dashboard',
+        label: 'Cruscotto & Statistiche',
+        icon: LayoutDashboard,
+        description: 'Metriche vendite, performance e accessi rapidi'
+      }
+    ]
+  },
+  {
+    title: 'Catalogo & Menu',
+    items: [
+      {
+        id: 'products',
+        label: 'Menu & Prodotti',
+        icon: Pizza,
+        badge: '53 Articoli',
+        description: 'Gestione pizze, categorie, prezzi e descrizioni'
+      },
+      {
+        id: 'stock',
+        label: 'Disponibilità & Stock',
+        icon: PackageCheck,
+        description: 'Controllo disponibilità immediata e quantità'
+      }
+    ]
+  },
+  {
+    title: 'Sito & Contenuti',
+    items: [
+      {
+        id: 'hero',
+        label: 'Hero & Copertina',
+        icon: Sparkles,
+        description: 'Titoli principali, slogan e sfondo hero'
+      },
+      {
+        id: 'offers',
+        label: 'Offerte "We Offer"',
+        icon: BadgePercent,
+        description: '3 schede promozionali in evidenza'
+      },
+      {
+        id: 'about',
+        label: 'Chi Siamo & Storia',
+        icon: Users,
+        description: 'Testi multilingua e foto del pizzaiolo'
+      },
+      {
+        id: 'gallery',
+        label: 'Galleria Fotografica',
+        icon: Images,
+        description: 'Foto del locale, delle pizze e del forno'
+      },
+      {
+        id: 'youtube',
+        label: 'Video YouTube',
+        icon: Video,
+        description: 'Video streaming e video promozionali'
+      },
+      {
+        id: 'logo',
+        label: 'Logo & Brand Identity',
+        icon: Palette,
+        description: 'Logo testata e favicon'
+      }
+    ]
+  },
+  {
+    title: 'Clienti & Marketing',
+    items: [
+      {
+        id: 'comments',
+        label: 'Recensioni & Commenti',
+        icon: MessageSquareQuote,
+        description: 'Moderazione commenti dei clienti sul sito'
+      },
+      {
+        id: 'popups',
+        label: 'Avvisi & Banner Popup',
+        icon: Megaphone,
+        description: 'Comunicazioni urgenti, ferie e festività'
+      }
+    ]
+  },
+  {
+    title: 'Configurazioni Negozio',
+    items: [
+      {
+        id: 'settings-hours',
+        label: 'Orari di Apertura',
+        icon: Clock,
+        description: 'Fasce pranzo e cena per ogni giorno'
+      },
+      {
+        id: 'settings-shipping',
+        label: 'Zone di Consegna (Free OSM)',
+        icon: Truck,
+        badge: 'Free Map',
+        description: 'Zone chilometriche, tariffe e raggio max'
+      },
+      {
+        id: 'settings-stripe',
+        label: 'Pagamenti Stripe',
+        icon: CreditCard,
+        description: 'Configurazione pagamenti con carta'
+      },
+      {
+        id: 'settings-notifications',
+        label: 'Notifiche & Allarmi',
+        icon: Bell,
+        description: 'Suoni e avvisi per nuovi ordini'
+      },
+      {
+        id: 'settings-general',
+        label: 'Info Ristorante & Contatti',
+        icon: Settings,
+        description: 'Telefono, email, indirizzo e capienza'
+      }
+    ]
+  },
+  {
+    title: 'Strumenti & Diagnostica',
+    items: [
+      {
+        id: 'tools-system',
+        label: 'Test di Sistema',
+        icon: Activity,
+        description: 'Diagnostica connessioni backend e notifiche'
+      },
+      {
+        id: 'tools-database',
+        label: 'Database & Schema',
+        icon: Database,
+        description: 'Aggiornamento schema e debugger prodotti'
+      }
+    ]
+  }
+];
+
+export const PizzeriaAdminPanel: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [currentDateTime, setCurrentDateTime] = useState<string>('');
+  const { handleLogout } = useAdminAuth();
+
   useEffect(() => {
-    console.log('🚀 [AdminPanel] Initializing PizzeriaAdminPanel...');
-    console.log('🚀 [AdminPanel] Active tab:', activeTab);
-    console.log('🚀 [AdminPanel] Environment check:', {
-      supabaseUrl: import.meta.env.VITE_SUPABASE_URL ? 'configured' : 'missing',
-      supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'configured' : 'missing'
-    });
-
-    // Add a small delay to ensure all components are ready
-    const timer = setTimeout(() => {
-      setIsReady(true);
-      console.log('🚀 [AdminPanel] Component fully initialized and ready');
-      console.log('🚀 [AdminPanel] Notification system available only in separate ordini section');
-    }, 200); // Increased delay slightly
-
-    return () => clearTimeout(timer);
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentDateTime(
+        now.toLocaleDateString('it-IT', {
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      );
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    console.log('🔄 [AdminPanel] Active tab changed to:', activeTab);
+  // Filter navigation items by search query
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return NAV_GROUPS;
+    const q = searchQuery.toLowerCase();
+    return NAV_GROUPS.map(group => ({
+      ...group,
+      items: group.items.filter(
+        item => item.label.toLowerCase().includes(q) || item.description.toLowerCase().includes(q)
+      )
+    })).filter(group => group.items.length > 0);
+  }, [searchQuery]);
+
+  // Find active item details for breadcrumbs
+  const currentItem = useMemo(() => {
+    for (const group of NAV_GROUPS) {
+      const found = group.items.find(item => item.id === activeTab);
+      if (found) return { ...found, groupTitle: group.title };
+    }
+    return { id: 'dashboard', label: 'Cruscotto', icon: LayoutDashboard, description: '', groupTitle: 'Panoramica' };
   }, [activeTab]);
 
-  // Show loading state during initialization
-  if (!isReady) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700">Caricamento Pannello Admin...</h2>
-          <p className="text-gray-500 mt-2">Inizializzazione componenti...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Organized admin sections in logical groups
-  const adminSections = [
-    // === CORE BUSINESS ===
-    {
-      id: 'dashboard',
-      label: 'Cruscotto',
-      icon: BarChart3,
-      description: 'Panoramica generale e statistiche',
-      category: 'core'
-    },
-
-    {
-      id: 'products',
-      label: 'Menu & Prodotti',
-      icon: Pizza,
-      description: 'Gestione menu, pizze e prodotti',
-      category: 'core'
-    },
-
-    {
-      id: 'stock',
-      label: 'Gestione Stock',
-      icon: Package,
-      description: 'Gestione stock e disponibilità prodotti',
-      category: 'core'
-    },
-
-    // === CONTENT MANAGEMENT ===
-    {
-      id: 'content',
-      label: 'Contenuti',
-      icon: Globe,
-      description: 'Gestione testi e contenuti del sito',
-      category: 'content'
-    },
-    {
-      id: 'gallery',
-      label: 'Galleria',
-      icon: Image,
-      description: 'Gestione immagini e galleria',
-      category: 'content'
-    },
-    {
-      id: 'youtube',
-      label: 'Video YouTube',
-      icon: Video,
-      description: 'Gestione video e contenuti YouTube',
-      category: 'content'
-    },
-
-    // === CUSTOMER INTERACTION ===
-    {
-      id: 'comments',
-      label: 'Commenti',
-      icon: MessageSquare,
-      description: 'Gestione commenti e recensioni',
-      category: 'interaction'
-    },
-    {
-      id: 'popups',
-      label: 'Popup & Annunci',
-      icon: Bell,
-      description: 'Gestione popup e annunci speciali',
-      category: 'interaction'
-    },
-
-    // === SYSTEM SETTINGS ===
-    {
-      id: 'settings',
-      label: 'Impostazioni',
-      icon: Settings,
-      description: 'Configurazioni generali del sito',
-      category: 'system'
-    },
-
-    // === TESTING & DEBUGGING ===
-    {
-      id: 'youtube-test',
-      label: 'YouTube Test',
-      icon: Video,
-      description: 'Test connessione YouTube',
-      category: 'testing'
-    },
-    {
-      id: 'menu-products-test',
-      label: 'Menu Connection',
-      icon: MenuIcon,
-      description: 'Test connessione menu e prodotti',
-      category: 'testing'
-    },
-    {
-      id: 'database-test',
-      label: 'Database Test',
-      icon: Database,
-      description: 'Test connessione database',
-      category: 'testing'
-    },
-    {
-      id: 'system-test',
-      label: 'System Test',
-      icon: Wrench,
-      description: 'Test completo del sistema',
-      category: 'testing'
-    },
-    {
-      id: 'frontend-test',
-      label: 'Frontend Test',
-      icon: Globe,
-      description: 'Test connessioni frontend',
-      category: 'testing'
-    },
-    {
-      id: 'ios-audio-test',
-      label: 'iOS Audio Test',
-      icon: Volume2,
-      description: 'Test audio notifications su iOS',
-      category: 'testing'
-    },
-
-    // === ADVANCED TOOLS ===
-    {
-      id: 'products-debug',
-      label: 'Products Debug',
-      icon: Pizza,
-      description: 'Debug prodotti e database',
-      category: 'advanced'
-    },
-    {
-      id: 'schema-updater',
-      label: 'Schema Update',
-      icon: Wrench,
-      description: 'Aggiorna schema database',
-      category: 'advanced'
-    },
-    {
-      id: 'schema-fixer',
-      label: 'Schema Fix',
-      icon: Wrench,
-      description: 'Risolvi problemi schema database',
-      category: 'advanced'
-    }
-  ];
+  const selectTab = (id: string) => {
+    setActiveTab(id);
+    setIsMobileMenuOpen(false);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* OrderNotificationSystem removed - only available in separate ordini section */}
-
-      {/* Enhanced Modern Header */}
-      <div className="bg-gradient-to-r from-white via-gray-50 to-white shadow-xl border-b border-gray-200 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="bg-gradient-to-br from-red-500 via-red-600 to-red-700 p-4 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-                <Pizza className="h-10 w-10 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 bg-clip-text text-transparent">
-                  Pannello Admin
-                </h1>
-                <p className="text-xl text-gray-600 font-semibold">Pizzeria Regina 2000</p>
-                <div className="text-sm text-gray-500 flex items-center mt-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                  Sistema attivo e funzionante
-                </div>
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-red-500 selection:text-white">
+      {/* ============================================================== */}
+      {/* SIDEBAR NAVIGATION (Modern Slate/Zinc Theme) */}
+      {/* ============================================================== */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-slate-950 border-r border-slate-800/80 flex flex-col transition-transform duration-300 md:static md:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-red-600 via-rose-500 to-amber-500 flex items-center justify-center shadow-lg shadow-red-950/40">
+              <Pizza className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
+                Regina 2000
+                <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                  Admin
+                </span>
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5 text-xs text-emerald-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-[11px] font-medium text-slate-400">Torino Centro</span>
               </div>
             </div>
-            <div className="flex items-center space-x-6">
-              {/* Ordini Button */}
-              <Button
-                onClick={() => window.open('/ordini', '_blank')}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 rounded-xl font-semibold"
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+            aria-label="Close sidebar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Search Bar in Sidebar */}
+        <div className="px-4 pt-4 pb-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Cerca sezione..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 text-xs bg-slate-900 border-slate-800 text-slate-200 placeholder:text-slate-500 focus-visible:ring-red-500 focus-visible:border-red-500 rounded-lg"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300"
               >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Gestione Ordini
-              </Button>
-
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-700">
-                  {new Date().toLocaleDateString('it-IT', {
-                    weekday: 'long',
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {new Date().toLocaleTimeString('it-IT', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                A
-              </div>
-            </div>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          {/* Enhanced Modern Navigation */}
-          <div className="bg-gradient-to-br from-white via-gray-50 to-white rounded-3xl shadow-2xl border border-gray-200 p-8 backdrop-blur-sm">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-3 flex items-center">
-                <div className="w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-full mr-4"></div>
-                Sezioni di Gestione
-              </h2>
-              <p className="text-gray-600 text-lg">Seleziona una sezione per iniziare a gestire il tuo sito</p>
-            </div>
-
-            {/* Quick Access to Ordini */}
-            <div className="mb-8 p-6 bg-gradient-to-r from-orange-50 via-orange-100 to-red-50 rounded-2xl border-2 border-orange-200 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 p-4 rounded-2xl shadow-xl">
-                    <ShoppingCart className="h-8 w-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-1">Gestione Ordini</h3>
-                    <p className="text-gray-600">Accesso rapido alla sezione ordini con notifiche audio</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => window.open('/ordini', '_blank')}
-                  className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-4 rounded-xl font-bold text-lg"
-                >
-                  <ShoppingCart className="w-6 h-6 mr-3" />
-                  Apri Ordini
-                </Button>
+        {/* Navigation Item Tree */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-6 scrollbar-thin scrollbar-thumb-slate-800">
+          {filteredGroups.map((group) => (
+            <div key={group.title} className="space-y-1">
+              <div className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {group.title}
               </div>
-            </div>
-
-            {/* Core Business Section */}
-            <div className="mb-10">
-              <h3 className="text-base font-bold text-gray-700 uppercase tracking-wide mb-6 flex items-center bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-xl border border-red-200">
-                <div className="w-3 h-3 bg-gradient-to-r from-red-500 to-red-600 rounded-full mr-3 animate-pulse"></div>
-                🏪 Gestione Principale
-              </h3>
-              <TabsList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-transparent h-auto">
-                {adminSections.filter(s => s.category === 'core').map((section) => (
-                  <TabsTrigger
-                    key={section.id}
-                    value={section.id}
-                    className="flex items-center p-4 text-left bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:shadow-lg hover:border-red-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-50 data-[state=active]:to-red-100 data-[state=active]:border-red-400 data-[state=active]:shadow-lg transition-all duration-200 h-auto"
-                  >
-                    <div className="bg-gradient-to-r from-red-500 to-red-600 p-3 rounded-lg mr-4">
-                      <section.icon size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{section.label}</div>
-                      <div className="text-sm text-gray-500 mt-1">{section.description}</div>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            {/* Content Management Section */}
-            <div className="mb-10">
-              <h3 className="text-base font-bold text-gray-700 uppercase tracking-wide mb-6 flex items-center bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
-                <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full mr-3 animate-pulse"></div>
-                📝 Gestione Contenuti
-              </h3>
-              <TabsList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 bg-transparent h-auto">
-                {adminSections.filter(s => s.category === 'content').map((section) => (
-                  <TabsTrigger
-                    key={section.id}
-                    value={section.id}
-                    className="flex items-center p-4 text-left bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:shadow-lg hover:border-blue-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-50 data-[state=active]:to-blue-100 data-[state=active]:border-blue-400 data-[state=active]:shadow-lg transition-all duration-200 h-auto"
-                  >
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-lg mr-4">
-                      <section.icon size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{section.label}</div>
-                      <div className="text-sm text-gray-500 mt-1">{section.description}</div>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            {/* Customer Interaction Section */}
-            <div className="mb-10">
-              <h3 className="text-base font-bold text-gray-700 uppercase tracking-wide mb-6 flex items-center bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-                <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-green-600 rounded-full mr-3 animate-pulse"></div>
-                👥 Interazione Clienti
-              </h3>
-              <TabsList className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-transparent h-auto">
-                {adminSections.filter(s => s.category === 'interaction').map((section) => (
-                  <TabsTrigger
-                    key={section.id}
-                    value={section.id}
-                    className="flex items-center p-4 text-left bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:shadow-lg hover:border-green-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-50 data-[state=active]:to-green-100 data-[state=active]:border-green-400 data-[state=active]:shadow-lg transition-all duration-200 h-auto"
-                  >
-                    <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 rounded-lg mr-4">
-                      <section.icon size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{section.label}</div>
-                      <div className="text-sm text-gray-500 mt-1">{section.description}</div>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            {/* System Settings */}
-            <div className="mb-10">
-              <h3 className="text-base font-bold text-gray-700 uppercase tracking-wide mb-6 flex items-center bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
-                <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full mr-3 animate-pulse"></div>
-                ⚙️ Impostazioni Sistema
-              </h3>
-              <TabsList className="grid grid-cols-1 gap-4 bg-transparent h-auto">
-                {adminSections.filter(s => s.category === 'system').map((section) => (
-                  <TabsTrigger
-                    key={section.id}
-                    value={section.id}
-                    className="flex items-center p-4 text-left bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl hover:shadow-lg hover:border-purple-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-50 data-[state=active]:to-purple-100 data-[state=active]:border-purple-400 data-[state=active]:shadow-lg transition-all duration-200 h-auto"
-                  >
-                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-3 rounded-lg mr-4">
-                      <section.icon size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{section.label}</div>
-                      <div className="text-sm text-gray-500 mt-1">{section.description}</div>
-                    </div>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-
-            {/* Advanced Tools - Enhanced Collapsible */}
-            <details className="group">
-              <summary className="cursor-pointer flex items-center justify-between p-6 bg-gradient-to-r from-orange-50 via-orange-100 to-orange-50 rounded-2xl border border-orange-200 hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full mr-3 animate-pulse"></div>
-                  <h3 className="text-base font-bold text-gray-700 uppercase tracking-wide">
-                    🔧 Strumenti Avanzati & Test
-                  </h3>
-                </div>
-                <div className="text-sm text-orange-600 group-open:hidden font-medium">Clicca per espandere</div>
-              </summary>
-              <div className="mt-4">
-                <TabsList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 bg-transparent h-auto">
-                  {adminSections.filter(s => s.category === 'testing' || s.category === 'advanced').map((section) => (
-                    <TabsTrigger
-                      key={section.id}
-                      value={section.id}
-                      className="flex items-center p-3 text-left bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-lg hover:shadow-md hover:border-orange-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-50 data-[state=active]:to-orange-100 data-[state=active]:border-orange-400 data-[state=active]:shadow-md transition-all duration-200 h-auto"
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => selectTab(item.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group ${
+                        isActive
+                          ? 'bg-red-600 text-white shadow-md shadow-red-950/40 font-semibold'
+                          : 'text-slate-400 hover:text-slate-100 hover:bg-slate-900/90'
+                      }`}
                     >
-                      <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-2 rounded-lg mr-3">
-                        <section.icon size={20} className="text-white" />
+                      <div className="flex items-center gap-2.5 truncate">
+                        <Icon
+                          className={`h-4 w-4 shrink-0 transition-transform ${
+                            isActive ? 'text-white' : 'text-slate-400 group-hover:text-red-400'
+                          }`}
+                        />
+                        <span className="truncate">{item.label}</span>
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-800 text-sm">{section.label}</div>
-                        <div className="text-xs text-gray-500 mt-1">{section.description}</div>
-                      </div>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+                      {item.badge && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
+                            isActive
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-800 text-slate-400 border border-slate-700/60'
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </details>
+            </div>
+          ))}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 space-y-2">
+          {/* Quick Direct Link to Live Orders */}
+          <Button
+            onClick={() => window.open('/ordini', '_blank')}
+            className="w-full h-9 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold rounded-lg shadow flex items-center justify-center gap-2"
+          >
+            <ShoppingCart className="h-3.5 w-3.5" />
+            <span>Pannello Ordini</span>
+            <ExternalLink className="h-3 w-3 opacity-70" />
+          </Button>
+
+          {/* User Profile & Logout */}
+          <div className="pt-1 flex items-center justify-between px-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 font-bold text-xs">
+                A
+              </div>
+              <div className="truncate">
+                <p className="text-slate-200 font-medium truncate leading-tight">Amministratore</p>
+                <p className="text-[10px] text-slate-500 leading-tight">Sessione Attiva</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Esci dall'account"
+              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Backdrop for mobile sidebar */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+        />
+      )}
+
+      {/* ============================================================== */}
+      {/* MAIN VIEWPORT */}
+      {/* ============================================================== */}
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-900">
+        {/* Top Navbar */}
+        <header className="h-16 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden text-slate-300 hover:text-white p-2 rounded-lg hover:bg-slate-800"
+              aria-label="Open sidebar"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </button>
+
+            {/* Breadcrumb path */}
+            <div className="flex items-center gap-2 text-xs md:text-sm">
+              <span className="text-slate-500 font-medium">{currentItem.groupTitle}</span>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
+              <span className="text-white font-semibold flex items-center gap-1.5">
+                <currentItem.icon className="h-4 w-4 text-red-500" />
+                {currentItem.label}
+              </span>
+            </div>
           </div>
 
-          {/* Tab Contents */}
-          <div className="space-y-6">
-            {/* Dashboard */}
-            <TabsContent value="dashboard" className="space-y-8">
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold text-blue-800">Prodotti Attivi</CardTitle>
-                    <div className="bg-blue-500 p-2 rounded-lg">
-                      <Pizza className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* Live Clock */}
+            <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg">
+              <Clock className="h-3.5 w-3.5 text-slate-400" />
+              <span>{currentDateTime}</span>
+            </div>
+
+            {/* View Live Website Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open('/', '_blank')}
+              className="h-8 text-xs bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-300 hover:text-white rounded-lg flex items-center gap-1.5"
+            >
+              <Store className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Vedi Negozio Live</span>
+              <ExternalLink className="h-3 w-3 opacity-60" />
+            </Button>
+
+            {/* Quick Live Orders CTA Button */}
+            <Button
+              size="sm"
+              onClick={() => window.open('/ordini', '_blank')}
+              className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm flex items-center gap-1.5"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span>Ordini Live</span>
+            </Button>
+          </div>
+        </header>
+
+        {/* Content Body */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+          {/* ============================================================== */}
+          {/* TAB: DASHBOARD */}
+          {/* ============================================================== */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header Hero Banner */}
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-950 via-slate-950 to-slate-900 border border-red-900/30 p-6 md:p-8 shadow-xl">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold mb-3">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Pannello di Controllo Pizzeria Regina 2000
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-blue-900">14</div>
-                    <p className="text-sm text-blue-600 flex items-center mt-2">
-                      <span className="text-green-600 font-medium">+3</span>
-                      <span className="ml-1">nuovi prodotti</span>
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                      Benvenuto nel gestionale, Amministratore!
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1 max-w-xl">
+                      Da qui puoi controllare il menu completo di 53 prodotti, aggiornare stock, prezzi,
+                      personalizzare contenuti visivi e gestire consegne a domicilio a Torino.
                     </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold text-green-800">Fatturato Oggi</CardTitle>
-                    <div className="bg-green-500 p-2 rounded-lg">
-                      <BarChart3 className="h-5 w-5 text-white" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-green-900">€245.50</div>
-                    <p className="text-sm text-green-600 flex items-center mt-2">
-                      <span className="text-green-600 font-medium">+15%</span>
-                      <span className="ml-1">da ieri</span>
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold text-orange-800">Prodotti Attivi</CardTitle>
-                    <div className="bg-orange-500 p-2 rounded-lg">
-                      <Pizza className="h-5 w-5 text-white" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-orange-900">14</div>
-                    <p className="text-sm text-orange-600 mt-2">Menu completo</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                    <CardTitle className="text-sm font-semibold text-purple-800">Nuovi Commenti</CardTitle>
-                    <div className="bg-purple-500 p-2 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-white" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold text-purple-900">3</div>
-                    <p className="text-sm text-purple-600 mt-2">Da moderare</p>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => window.open('/ordini', '_blank')}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg text-sm px-5 h-10 rounded-xl flex items-center gap-2"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      Schermata Ordini Attivi
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setActiveTab('products')}
+                      className="bg-slate-900/80 border-slate-700 hover:bg-slate-800 text-white text-sm px-4 h-10 rounded-xl flex items-center gap-2"
+                    >
+                      <Pizza className="h-4 w-4 text-red-400" />
+                      Gestisci Menu
+                    </Button>
+                  </div>
+                </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Azioni Rapide</h3>
+              {/* KPI Metrics Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Metric 1 */}
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Menu Prodotti</span>
+                    <div className="p-2 rounded-xl bg-red-500/10 text-red-400">
+                      <Pizza className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">53 Articoli</div>
+                  <div className="text-xs text-emerald-400 flex items-center gap-1 mt-1 font-medium">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>Tutti convertiti in WebP & CDN</span>
+                  </div>
+                </div>
+
+                {/* Metric 2 */}
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Validazione Indirizzi</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                      <Truck className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">Free OSM</div>
+                  <div className="text-xs text-emerald-400 flex items-center gap-1 mt-1 font-medium">
+                    <ShieldCheck className="h-3 w-3" />
+                    <span>Photon Geocoder Attivo</span>
+                  </div>
+                </div>
+
+                {/* Metric 3 */}
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Raggio Consegna</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+                      <Store className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">15 Km Max</div>
+                  <div className="text-xs text-slate-400 flex items-center gap-1 mt-1 font-medium">
+                    <span>Torino & Comuni limitrofi</span>
+                  </div>
+                </div>
+
+                {/* Metric 4 */}
+                <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 hover:border-slate-700 transition-all shadow-sm">
+                  <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
+                    <span>Pagamenti Online</span>
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="text-2xl font-bold text-white mt-2">Stripe</div>
+                  <div className="text-xs text-purple-400 flex items-center gap-1 mt-1 font-medium">
+                    <span>Carta di credito / Apple Pay</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Navigation Cards Grid */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">
+                  Accessi Rapidi alle Funzionalità
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button className="flex items-center p-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-lg transition-all duration-200">
-                    <Plus className="h-5 w-5 mr-3" />
-                    Nuovo Prodotto
-                  </button>
                   <button
-                    onClick={() => window.open('/ordini', '_blank')}
-                    className="flex items-center p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:shadow-lg transition-all duration-200"
+                    onClick={() => setActiveTab('products')}
+                    className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-red-500/50 hover:bg-slate-950 text-left transition-all group flex items-start gap-4"
                   >
-                    <ShoppingCart className="h-5 w-5 mr-3" />
-                    Apri Sezione Ordini
+                    <div className="p-3 rounded-xl bg-red-500/10 text-red-400 group-hover:scale-110 transition-transform">
+                      <Pizza className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm group-hover:text-red-400 transition-colors">
+                        Modifica Menu & Pizze
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Aggiungi nuove pizze, aggiorna prezzi, ingredienti e categorie.
+                      </p>
+                    </div>
                   </button>
-                  <button className="flex items-center p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200">
-                    <Settings className="h-5 w-5 mr-3" />
-                    Impostazioni
+
+                  <button
+                    onClick={() => setActiveTab('stock')}
+                    className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-950 text-left transition-all group flex items-start gap-4"
+                  >
+                    <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                      <PackageCheck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm group-hover:text-emerald-400 transition-colors">
+                        Disponibilità Stock Rapida
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Attiva o disattiva istantaneamente prodotti esauriti per la serata.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('settings-shipping')}
+                    className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-950 text-left transition-all group flex items-start gap-4"
+                  >
+                    <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-110 transition-transform">
+                      <Truck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white text-sm group-hover:text-amber-400 transition-colors">
+                        Tariffe e Zone di Consegna
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Configura zone chilometriche da Corso Regina Margherita e soglia gratis.
+                      </p>
+                    </div>
                   </button>
                 </div>
               </div>
 
-              <Suspense fallback={<LoadingSpinner />}>
-                <AnalyticsDashboard />
-              </Suspense>
-            </TabsContent>
+              {/* Analytics Section Component */}
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-white">Report & Analytics Dettagliati</h3>
+                    <p className="text-xs text-slate-400">Statistiche di vendita e andamento ordini</p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AnalyticsDashboard />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Orders Management removed - only available in separate ordini section */}
-
-            {/* Stock Management */}
-            <TabsContent value="stock">
-              <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 rounded-t-2xl border-b border-green-200">
-                  <CardTitle className="flex items-center text-green-800">
-                    <div className="bg-green-500 p-2 rounded-lg mr-3">
-                      <Package className="h-6 w-6 text-white" />
+          {/* ============================================================== */}
+          {/* TAB: PRODUCTS & MENU */}
+          {/* ============================================================== */}
+          {activeTab === 'products' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-xl bg-red-500/10 text-red-400">
+                      <Pizza className="h-6 w-6" />
                     </div>
-                    Gestione Stock Prodotti
-                  </CardTitle>
-                  <CardDescription className="text-green-700">
-                    Gestisci la disponibilità e le quantità di stock per tutti i prodotti
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <BulkStockManager />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Products Management */}
-            <TabsContent value="products">
-              <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                <CardHeader className="bg-gradient-to-r from-red-50 to-red-100 rounded-t-2xl border-b border-red-200">
-                  <CardTitle className="flex items-center text-red-800">
-                    <div className="bg-red-500 p-2 rounded-lg mr-3">
-                      <Pizza className="h-6 w-6 text-white" />
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Menu & Gestione Prodotti</h2>
+                      <p className="text-xs text-slate-400">
+                        Crea, modifica immagini WebP su CDN Supabase, imposta prezzi e descrizioni
+                      </p>
                     </div>
-                    Gestione Menu e Prodotti
-                  </CardTitle>
-                  <CardDescription className="text-red-600">
-                    Aggiungi, modifica o rimuovi pizze e prodotti dal menu
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <ProductsAdmin />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </div>
+                  <Button
+                    onClick={() => setActiveTab('stock')}
+                    variant="outline"
+                    className="text-xs bg-slate-900 border-slate-800 text-slate-200 hover:text-white"
+                  >
+                    <PackageCheck className="h-4 w-4 mr-2 text-emerald-400" />
+                    Passa a Gestione Stock
+                  </Button>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ProductsAdmin />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Content Management */}
-            <TabsContent value="content">
-              <div className="space-y-8">
-                {/* Logo Management */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-2xl border-b border-purple-200">
-                    <CardTitle className="flex items-center text-purple-800">
-                      <div className="bg-purple-500 p-2 rounded-lg mr-3">
-                        <Image className="h-6 w-6 text-white" />
-                      </div>
-                      Gestione Logo
-                    </CardTitle>
-                    <CardDescription className="text-purple-600">
-                      Carica e modifica il logo della pizzeria (immagine sinistra)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <LogoEditor />
-                    </Suspense>
-                  </CardContent>
-                </Card>
+          {/* ============================================================== */}
+          {/* TAB: STOCK MANAGEMENT */}
+          {/* ============================================================== */}
+          {activeTab === 'stock' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
+                    <PackageCheck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Disponibilità & Stock Prodotti</h2>
+                    <p className="text-xs text-slate-400">
+                      Imposta rapidamente la disponibilità di ingredienti e prodotti per il servizio odierno
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <BulkStockManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-                {/* Hero Content Management */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-t-2xl border-b border-indigo-200">
-                    <CardTitle className="flex items-center text-indigo-800">
-                      <div className="bg-indigo-500 p-2 rounded-lg mr-3">
-                        <Globe className="h-6 w-6 text-white" />
-                      </div>
-                      Gestione Hero Section
-                    </CardTitle>
-                    <CardDescription className="text-indigo-600">
-                      Modifica il contenuto e l'immagine hero (immagine destra)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <HeroContentEditor />
-                    </Suspense>
-                  </CardContent>
-                </Card>
+          {/* ============================================================== */}
+          {/* TAB: HERO SECTION */}
+          {/* ============================================================== */}
+          {activeTab === 'hero' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Sezione Hero di Copertina</h2>
+                    <p className="text-xs text-slate-400">
+                      Modifica il titolo principale, sottotitolo e video/immagine di sfondo della testata
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <HeroContentEditor />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-                {/* We Offer Section Management */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-2xl border-b border-orange-200">
-                    <CardTitle className="flex items-center text-orange-800">
-                      <div className="bg-orange-500 p-2 rounded-lg mr-3">
-                        <Pizza className="h-6 w-6 text-white" />
-                      </div>
-                      Gestione "We Offer" Section
-                    </CardTitle>
-                    <CardDescription className="text-orange-600">
-                      Modifica la sezione "We Offer" con 3 offerte personalizzabili
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <WeOfferManager />
-                    </Suspense>
-                  </CardContent>
-                </Card>
+          {/* ============================================================== */}
+          {/* TAB: WE OFFER SECTION */}
+          {/* ============================================================== */}
+          {activeTab === 'offers' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400">
+                    <BadgePercent className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Sezione "We Offer" (Offerte Speciali)</h2>
+                    <p className="text-xs text-slate-400">
+                      Personalizza i 3 riquadri di specialità (Pizza a Metro, Farina 5 Stagioni, Impasto)
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <WeOfferManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-                {/* Chi Siamo Content Management */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 rounded-t-2xl border-b border-green-200">
-                    <CardTitle className="flex items-center text-green-800">
-                      <div className="bg-green-500 p-2 rounded-lg mr-3">
-                        <Users className="h-6 w-6 text-white" />
-                      </div>
-                      Gestione Contenuto "Chi Siamo"
-                    </CardTitle>
-                    <CardDescription className="text-green-600">
-                      Modifica tutti i testi della sezione Chi Siamo (multilingua)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
+          {/* ============================================================== */}
+          {/* TAB: ABOUT US (CHI SIAMO) */}
+          {/* ============================================================== */}
+          {activeTab === 'about' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Sezione "Chi Siamo"</h2>
+                    <p className="text-xs text-slate-400">
+                      Modifica la storia della pizzeria in 4 lingue e la foto del maestro pizzaiolo
+                    </p>
+                  </div>
+                </div>
+
+                <Tabs defaultValue="texts" className="space-y-6">
+                  <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-xl">
+                    <TabsTrigger
+                      value="texts"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Testi Multilingua
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="image"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Immagine Pizzaiolo
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="texts">
                     <Suspense fallback={<LoadingSpinner />}>
                       <ChiSiamoContentManager />
                     </Suspense>
-                  </CardContent>
-                </Card>
+                  </TabsContent>
 
-                {/* Chi Siamo Image Management */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-2xl border-b border-blue-200">
-                    <CardTitle className="flex items-center text-blue-800">
-                      <div className="bg-blue-500 p-2 rounded-lg mr-3">
-                        <Users className="h-6 w-6 text-white" />
-                      </div>
-                      Gestione Immagine "Chi Siamo"
-                    </CardTitle>
-                    <CardDescription className="text-blue-600">
-                      Gestisci l'immagine sul lato destro della sezione Chi Siamo
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
+                  <TabsContent value="image">
                     <Suspense fallback={<LoadingSpinner />}>
                       <ChiSiamoImageManager />
                     </Suspense>
-                  </CardContent>
-                </Card>
+                  </TabsContent>
+                </Tabs>
               </div>
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Gallery Management */}
-            <TabsContent value="gallery">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Image className="mr-2" />
-                    Gestione Galleria
-                  </CardTitle>
-                  <CardDescription>
-                    Carica e organizza le immagini della pizzeria
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <GalleryManager />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* YouTube Management */}
-            <TabsContent value="youtube">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Video className="mr-2" />
-                    Gestione Video YouTube
-                  </CardTitle>
-                  <CardDescription>
-                    Gestisci i video YouTube mostrati sul sito
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <YouTubeManager />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Comments Management */}
-            <TabsContent value="comments">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MessageSquare className="mr-2" />
-                    Gestione Commenti
-                  </CardTitle>
-                  <CardDescription>
-                    Modera commenti e recensioni dei clienti
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <CommentsManager />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Popup Management */}
-            <TabsContent value="popups">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Bell className="mr-2" />
-                    Gestione Popup e Annunci
-                  </CardTitle>
-                  <CardDescription>
-                    Crea e gestisci popup per occasioni speciali
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <PopupManager />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Settings */}
-            <TabsContent value="settings">
-              <div className="space-y-8">
-                {/* General Settings */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-t-2xl border-b border-gray-200">
-                    <CardTitle className="flex items-center text-gray-800">
-                      <div className="bg-gray-500 p-2 rounded-lg mr-3">
-                        <Settings className="h-6 w-6 text-white" />
-                      </div>
-                      Impostazioni Generali
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                      Configura le impostazioni principali del ristorante
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <SettingsManager />
-                    </Suspense>
-                  </CardContent>
-                </Card>
-
-                {/* Business Hours Settings */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-t-2xl border-b border-blue-200">
-                    <CardTitle className="flex items-center text-blue-800">
-                      <div className="bg-blue-500 p-2 rounded-lg mr-3">
-                        <Clock className="h-6 w-6 text-white" />
-                      </div>
-                      Orari di Apertura
-                    </CardTitle>
-                    <CardDescription className="text-blue-600">
-                      Gestisci gli orari di apertura per ogni giorno della settimana
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <BusinessHoursManager />
-                    </Suspense>
-                  </CardContent>
-                </Card>
-
-                {/* Delivery & Payment Settings */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 rounded-t-2xl border-b border-green-200">
-                    <CardTitle className="flex items-center text-green-800">
-                      <div className="bg-green-500 p-2 rounded-lg mr-3">
-                        <MapPin className="h-6 w-6 text-white" />
-                      </div>
-                      Consegne e Pagamenti
-                    </CardTitle>
-                    <CardDescription className="text-green-600">
-                      Configura zone di consegna, tariffe e metodi di pagamento
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <ShippingZoneManager />
-                    </Suspense>
-                  </CardContent>
-                </Card>
-
-                {/* Stripe Payment Settings */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-t-2xl border-b border-purple-200">
-                    <CardTitle className="flex items-center text-purple-800">
-                      <div className="bg-purple-500 p-2 rounded-lg mr-3">
-                        <CreditCard className="h-6 w-6 text-white" />
-                      </div>
-                      Configurazione Stripe
-                    </CardTitle>
-                    <CardDescription className="text-purple-600">
-                      Gestisci le impostazioni di pagamento Stripe
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <StripeSettings />
-                    </Suspense>
-                  </CardContent>
-                </Card>
-
-                {/* Notification Settings */}
-                <Card className="bg-white rounded-2xl shadow-xl border border-gray-200">
-                  <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-2xl border-b border-orange-200">
-                    <CardTitle className="flex items-center text-orange-800">
-                      <div className="bg-orange-500 p-2 rounded-lg mr-3">
-                        <Bell className="h-6 w-6 text-white" />
-                      </div>
-                      Impostazioni Notifiche
-                    </CardTitle>
-                    <CardDescription className="text-orange-600">
-                      Configura impostazioni generali di notifica (ordini gestiti in sezione separata)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <NotificationSettings />
-                    </Suspense>
-                  </CardContent>
-                </Card>
+          {/* ============================================================== */}
+          {/* TAB: PHOTO GALLERY */}
+          {/* ============================================================== */}
+          {activeTab === 'gallery' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400">
+                    <Images className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Galleria Fotografica</h2>
+                    <p className="text-xs text-slate-400">
+                      Carica nuove foto in alta definizione per mostrare pizze, ingredienti e il locale
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <GalleryManager />
+                </Suspense>
               </div>
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Database Test */}
-            <TabsContent value="database-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Settings className="mr-2" />
-                    Database Connection Test
-                  </CardTitle>
-                  <CardDescription>
-                    Test database connectivity and gallery data loading
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <DatabaseTest />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: YOUTUBE VIDEOS */}
+          {/* ============================================================== */}
+          {activeTab === 'youtube' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-red-500/10 text-red-400">
+                    <Video className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Video YouTube</h2>
+                    <p className="text-xs text-slate-400">
+                      Gestisci i video promozionali e video shorts incorporati nel sito
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <YouTubeManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* System Connection Test */}
-            <TabsContent value="system-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Bell className="mr-2" />
-                    System Connection Test
-                  </CardTitle>
-                  <CardDescription>
-                    Test complete system: Products ↔ Admin, Content Management, Real-time Updates
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <SystemConnectionTest />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: LOGO & BRANDING */}
+          {/* ============================================================== */}
+          {activeTab === 'logo' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400">
+                    <Palette className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Logo & Identità Visiva</h2>
+                    <p className="text-xs text-slate-400">
+                      Carica e configura il logo principale della pizzeria e le icone
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <LogoEditor />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Products Debugger */}
-            <TabsContent value="products-debug">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Pizza className="mr-2" />
-                    Products Database Debugger
-                  </CardTitle>
-                  <CardDescription>
-                    Debug products database, check data, and create sample products
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <ProductsDebugger />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: COMMENTS & REVIEWS */}
+          {/* ============================================================== */}
+          {activeTab === 'comments' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-teal-500/10 text-teal-400">
+                    <MessageSquareQuote className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Recensioni & Commenti Clienti</h2>
+                    <p className="text-xs text-slate-400">
+                      Modera, approva o nascondi i feedback lasciati dai clienti della pizzeria
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <CommentsManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Menu Products Connection Test */}
-            <TabsContent value="menu-products-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MenuIcon className="mr-2" />
-                    Menu & Products Connection Test
-                  </CardTitle>
-                  <CardDescription>
-                    Test how menu and products sections connect to the database
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <MenuProductsConnectionTest />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: POPUPS & ANNOUNCEMENTS */}
+          {/* ============================================================== */}
+          {activeTab === 'popups' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
+                    <Megaphone className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Popup & Avvisi Promo</h2>
+                    <p className="text-xs text-slate-400">
+                      Crea messaggi popup per chiusure festività, sconti speciali o promozioni
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PopupManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Schema Fixer */}
-            <TabsContent value="schema-fixer">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Wrench className="mr-2" />
-                    Products Schema Fixer
-                  </CardTitle>
-                  <CardDescription>
-                    Fix database schema issues and missing columns
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <ProductsSchemaFixer />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: OPENING HOURS */}
+          {/* ============================================================== */}
+          {activeTab === 'settings-hours' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Orari di Apertura Settimanali</h2>
+                    <p className="text-xs text-slate-400">
+                      Configura gli orari per pranzo e cena; controlla la disponibilità degli ordini
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <BusinessHoursManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Schema Updater */}
-            <TabsContent value="schema-updater">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Wrench className="mr-2" />
-                    Database Schema Updater
-                  </CardTitle>
-                  <CardDescription>
-                    Add advanced features to products table including stock management, SEO fields, and more
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <DatabaseSchemaUpdater />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: SHIPPING & DELIVERY ZONES */}
+          {/* ============================================================== */}
+          {activeTab === 'settings-shipping' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
+                    <Truck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-white">Zone di Consegna & Tariffe</h2>
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">
+                        Free OpenStreetMap Attivo
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Geocodifica gratuita integrata: calcolo istantaneo delle distanze e costi di consegna
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <ShippingZoneManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* Frontend Connection Tester */}
-            <TabsContent value="frontend-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Globe className="mr-2" />
-                    Frontend Database Connection Tester
-                  </CardTitle>
-                  <CardDescription>
-                    Test how frontend components connect to the database
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <FrontendConnectionTester />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: STRIPE PAYMENTS */}
+          {/* ============================================================== */}
+          {activeTab === 'settings-stripe' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Impostazioni Pagamento Stripe</h2>
+                    <p className="text-xs text-slate-400">
+                      Configura chiavi API Stripe e parametri di checkout per pagamenti con carta
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <StripeSettings />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* iOS Audio Test */}
-            <TabsContent value="ios-audio-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Volume2 className="mr-2" />
-                    iOS Audio Notification Test
-                  </CardTitle>
-                  <CardDescription>
-                    Test and debug audio notifications on iOS devices
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <IOSAudioTest />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
+          {/* ============================================================== */}
+          {/* TAB: NOTIFICATIONS */}
+          {/* ============================================================== */}
+          {activeTab === 'settings-notifications' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400">
+                    <Bell className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Notifiche & Allarmi Ordini</h2>
+                    <p className="text-xs text-slate-400">
+                      Configura suonerie, allarmi acustici e preferenze notifiche
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <NotificationSettings />
+                </Suspense>
+              </div>
+            </div>
+          )}
 
-            {/* YouTube Connection Test */}
-            <TabsContent value="youtube-test">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Video className="mr-2" />
-                    Test Connessione YouTube
-                  </CardTitle>
-                  <CardDescription>
-                    Verifica la connessione tra admin panel e frontend per i video YouTube
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <YouTubeConnectionTest />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </div>
-        </Tabs>
+          {/* ============================================================== */}
+          {/* TAB: GENERAL SETTINGS */}
+          {/* ============================================================== */}
+          {activeTab === 'settings-general' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-slate-800 text-slate-300">
+                    <Settings className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Informazioni Ristorante & Contatti</h2>
+                    <p className="text-xs text-slate-400">
+                      Nome locale, recapiti telefonici, email, indirizzo civico e lingue attive
+                    </p>
+                  </div>
+                </div>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SettingsManager />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* TAB: SYSTEM DIAGNOSTICS & TESTS */}
+          {/* ============================================================== */}
+          {activeTab === 'tools-system' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400">
+                    <Activity className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Diagnostica & Test Connessioni</h2>
+                    <p className="text-xs text-slate-400">
+                      Verifica rapida della connettività database, YouTube e audio notifiche iOS
+                    </p>
+                  </div>
+                </div>
+
+                <Tabs defaultValue="system" className="space-y-6">
+                  <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex-wrap h-auto gap-1">
+                    <TabsTrigger
+                      value="system"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      System Test
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="database"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Database Connect
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="frontend"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Frontend Connect
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="youtube"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      YouTube
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="audio"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      iOS Audio
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="system">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <SystemConnectionTest />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="database">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <DatabaseTest />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="frontend">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <FrontendConnectionTester />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="youtube">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <YouTubeConnectionTest />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="audio">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <IOSAudioTest />
+                    </Suspense>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================== */}
+          {/* TAB: DATABASE TOOLS & SCHEMA */}
+          {/* ============================================================== */}
+          {activeTab === 'tools-database' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3 border-b border-slate-800 pb-5">
+                  <div className="p-3 rounded-xl bg-cyan-500/10 text-cyan-400">
+                    <Database className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">Manutenzione Database & Schema</h2>
+                    <p className="text-xs text-slate-400">
+                      Strumenti per verificare colonne mancanti, riparare tabelle e fare debug
+                    </p>
+                  </div>
+                </div>
+
+                <Tabs defaultValue="debugger" className="space-y-6">
+                  <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex-wrap h-auto gap-1">
+                    <TabsTrigger
+                      value="debugger"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Debugger Prodotti
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="fixer"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Schema Fixer
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="updater"
+                      className="text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white rounded-lg"
+                    >
+                      Schema Updater
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="debugger">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <ProductsDebugger />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="fixer">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <ProductsSchemaFixer />
+                    </Suspense>
+                  </TabsContent>
+
+                  <TabsContent value="updater">
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <DatabaseSchemaUpdater />
+                    </Suspense>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
