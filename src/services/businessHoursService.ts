@@ -311,18 +311,23 @@ class BusinessHoursService {
     };
 
     const openDays: string[] = [];
+    const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
     
-    Object.entries(hours).forEach(([day, dayHours]) => {
+    validDays.forEach((day) => {
+      const dayHours = hours[day];
+      if (!dayHours || !dayHours.lunch || !dayHours.dinner) {
+        return;
+      }
       const periods = [];
-      if (dayHours.lunch.isOpen) {
+      if (dayHours.lunch && dayHours.lunch.isOpen) {
         periods.push(`${dayHours.lunch.openTime}-${dayHours.lunch.closeTime}`);
       }
-      if (dayHours.dinner.isOpen) {
+      if (dayHours.dinner && dayHours.dinner.isOpen) {
         periods.push(`${dayHours.dinner.openTime}-${dayHours.dinner.closeTime}`);
       }
       
       if (periods.length > 0) {
-        const dayName = dayNames[day as keyof typeof dayNames];
+        const dayName = dayNames[day];
         openDays.push(`${dayName}: ${periods.join(', ')}`);
       }
     });

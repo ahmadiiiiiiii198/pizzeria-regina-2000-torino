@@ -69,15 +69,11 @@ export const BusinessHoursProvider: React.FC<BusinessHoursProviderProps> = ({ ch
       }
 
       const result = await businessHoursService.isBusinessOpen();
-      const formatted = await businessHoursService.getFormattedHours();
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🕒 [BusinessHoursProvider] Service returned:', {
-          isOpen: result.isOpen,
-          message: result.message,
-          todayHours: result.todayHours,
-          formatted
-        });
+      let formatted = 'Orari standard';
+      try {
+        formatted = await businessHoursService.getFormattedHours();
+      } catch (formatErr) {
+        console.warn('⚠️ [BusinessHoursProvider] Non-fatal error getting formatted hours:', formatErr);
       }
 
       setIsOpen(result.isOpen);
