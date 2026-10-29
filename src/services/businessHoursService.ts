@@ -187,19 +187,13 @@ class BusinessHoursService {
 
     console.log('🕒 [BusinessHours] Today is:', currentDay, 'Hours:', todayHours);
 
-    // 🎯 MASTER STORE OVERRIDE (Controlled from Sunmi Printer App or Admin)
+    // 🎯 STORE ORDERING CONTROL (Controlled from Sunmi Printer App or Admin)
+    // Automatic schedule-based opening/closing has been removed as requested.
+    // The store is OPEN for ordering by default, unless explicitly set to 'closed'.
     const manualOverride = (hours as any).manualOverride;
-    if (manualOverride === 'open') {
-      console.log('🔓 [BusinessHours] Manual override: FORCE OPEN - restrictions lifted for clients!');
-      return {
-        isOpen: true,
-        message: 'Siamo aperti per ordini online! Puoi effettuare il tuo ordine.',
-        todayHours
-      };
-    }
 
     if (manualOverride === 'closed') {
-      console.log('🔒 [BusinessHours] Manual override: FORCE CLOSED - ordering restricted!');
+      console.log('🔒 [BusinessHours] Manual switch: CLOSED - online ordering is restricted!');
       return {
         isOpen: false,
         message: 'La pizzeria è al momento chiusa per ordini online. Riapriremo presto!',
@@ -207,56 +201,12 @@ class BusinessHoursService {
       };
     }
 
-    // Check if business is open today (either lunch or dinner)
-    const lunchOpen = todayHours.lunch.isOpen;
-    const dinnerOpen = todayHours.dinner.isOpen;
-    
-    if (!lunchOpen && !dinnerOpen) {
-      console.log('🚫 [BusinessHours] Business is closed all day');
-      const nextOpenTime = this.getNextOpenTime(hours, now);
-      return {
-        isOpen: false,
-        message: 'Siamo chiusi oggi. Puoi effettuare ordini durante i nostri orari di apertura.',
-        nextOpenTime,
-        todayHours
-      };
-    }
-
-    // Check if current time is within lunch or dinner hours
-    const currentTime = this.formatTime(now);
-    const isWithinLunch = lunchOpen && this.isTimeWithinRange(currentTime, todayHours.lunch.openTime, todayHours.lunch.closeTime);
-    const isWithinDinner = dinnerOpen && this.isTimeWithinRange(currentTime, todayHours.dinner.openTime, todayHours.dinner.closeTime);
-
-    console.log('🕒 [BusinessHours] Time check:', {
-      currentTime,
-      lunch: { isOpen: lunchOpen, hours: `${todayHours.lunch.openTime}-${todayHours.lunch.closeTime}`, withinHours: isWithinLunch },
-      dinner: { isOpen: dinnerOpen, hours: `${todayHours.dinner.openTime}-${todayHours.dinner.closeTime}`, withinHours: isWithinDinner }
-    });
-
-    if (isWithinLunch || isWithinDinner) {
-      const period = isWithinLunch ? 'pranzo' : 'cena';
-      console.log(`✅ [BusinessHours] Business is OPEN for ${period}`);
-      return {
-        isOpen: true,
-        message: `Siamo aperti per ${period}! Puoi effettuare il tuo ordine.`,
-        todayHours
-      };
-    } else {
-      console.log('❌ [BusinessHours] Business is CLOSED');
-      const nextOpenTime = this.getNextOpenTime(hours, now);
-      
-      // Build hours message
-      const hoursMsg = [];
-      if (lunchOpen) hoursMsg.push(`Pranzo: ${todayHours.lunch.openTime}-${todayHours.lunch.closeTime}`);
-      if (dinnerOpen) hoursMsg.push(`Cena: ${todayHours.dinner.openTime}-${todayHours.dinner.closeTime}`);
-      
-      return {
-        isOpen: false,
-        message: `Siamo chiusi. Orari di oggi: ${hoursMsg.join(', ')}`,
-        nextOpenTime,
-        todayHours
-      };
-    }
+    console.log('🔓 [BusinessHours] Manual switch: OPEN - online ordering is active for clients!');
+    return {
+      isOpen: true,
+      message: 'Siamo aperti per ordini online! Puoi effettuare il tuo ordine.',
+      todayHours
+    };
   }
 
   /**
