@@ -75,9 +75,9 @@ const DirectPaymentButton: React.FC<DirectPaymentButtonProps> = ({
           status: 'payment_pending', // 🔒 HIDDEN from admin until payment confirmed
           payment_status: 'pending',
           payment_method: 'stripe',
-          user_id: user.id, // 🔒 SECURITY: Always associate with authenticated user
-          special_instructions: `Product Order - ${product.name}\nQuantity: ${orderData.quantity}\nSpecial Requests: ${orderData.specialRequests}`,
+          notes: `Product Order - ${product.name} (x${orderData.quantity}). ${orderData.specialRequests ? `Note: ${orderData.specialRequests}` : ''}`,
           metadata: {
+            userId: user?.id || null,
             product_id: product.id,
             product_name: product.name,
             quantity: orderData.quantity,
@@ -102,17 +102,17 @@ const DirectPaymentButton: React.FC<DirectPaymentButtonProps> = ({
       console.log('✅ Order created:', order.id);
 
       // Step 2: Create order item with correct schema
-      const subtotal = product.price * orderData.quantity;
-
       const orderItemData = {
         order_id: order.id,
         product_id: product.id,
         product_name: product.name,
         product_price: product.price,
+        price: product.price,
         quantity: orderData.quantity,
         subtotal: product.price * orderData.quantity,
-        unit_price: product.price,
-        special_requests: orderData.specialRequests
+        metadata: {
+          special_requests: orderData.specialRequests || null
+        }
       };
 
       console.log('🔍 ProductOrder: Inserting order item:', orderItemData);
@@ -128,16 +128,15 @@ const DirectPaymentButton: React.FC<DirectPaymentButtonProps> = ({
 
       console.log('✅ Order item created');
 
-      // Create notification
+      // Create notification with correct schema
       await supabase
         .from('order_notifications')
         .insert({
           order_id: order.id,
-          notification_type: 'new_order',
+          type: 'new_order',
           title: 'Nuovo Ordine!',
-          message: `New product order received from ${orderData.customerName} - ${product.name} x${orderData.quantity} - €${totalAmount.toFixed(2)}`,
-          is_read: false,
-          is_acknowledged: false
+          message: `Nuovo ordine ricevuto da ${orderData.customerName} - ${product.name} x${orderData.quantity} - €${totalAmount.toFixed(2)}`,
+          is_read: false
         });
 
       // ✅ Order saved to database - tracking handled by UnifiedOrderTracker
@@ -429,15 +428,16 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
         customer_name: orderData.customerName,
         customer_email: orderData.customerEmail,
         customer_phone: orderData.customerPhone || 'Non fornito',
-        customer_address: orderData.deliveryAddress, // Use customer_address column
+        customer_address: orderData.deliveryAddress,
         delivery_type: 'delivery',
         total_amount: totalAmount,
         delivery_fee: addressValidation.deliveryFee || 0,
-        status: 'confirmed', // Orders are automatically confirmed
+        status: 'confirmed',
         payment_status: 'pending',
         payment_method: 'cash_on_delivery',
-        user_id: user.id, // 🔒 SECURITY: Always associate with authenticated user
+        notes: `Pay Later Order - ${product.name} (x${orderData.quantity}). ${orderData.specialRequests ? `Note: ${orderData.specialRequests}` : ''}`,
         metadata: {
+          userId: user?.id || null,
           deliveryFee: addressValidation.deliveryFee,
           estimatedTime: addressValidation.estimatedTime,
           coordinates: addressValidation.coordinates,
@@ -448,8 +448,7 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
           sessionId: clientIdentity.sessionId,
           orderCreatedAt: new Date().toISOString(),
           isAuthenticatedOrder: isAuthenticated
-        },
-        special_instructions: `Pay Later Order - Product: ${product.name}\nQuantity: ${orderData.quantity}\nSpecial Requests: ${orderData.specialRequests}`
+        }
       })
       .select()
       .single();
@@ -458,16 +457,18 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
       throw new Error(`Order creation failed: ${orderError.message}`);
     }
 
-    // Create order item
+    // Create order item matching schema
     const orderItemData = {
       order_id: order.id,
       product_id: product.id,
       product_name: product.name,
       quantity: orderData.quantity,
       product_price: product.price,
+      price: product.price,
       subtotal: product.price * orderData.quantity,
-      unit_price: product.price,
-      special_requests: orderData.specialRequests
+      metadata: {
+        special_requests: orderData.specialRequests || null
+      }
     };
 
     console.log('🔍 ProductOrder PayLater: Inserting order item:', orderItemData);
@@ -482,16 +483,15 @@ const ProductOrderModal: React.FC<ProductOrderModalProps> = ({ product, isOpen, 
     }
     console.log('✅ ProductOrder PayLater: Order item created successfully');
 
-    // Create notification
+    // Create notification with correct schema
     await supabase
       .from('order_notifications')
       .insert({
         order_id: order.id,
-        notification_type: 'new_order',
+        type: 'new_order',
         title: 'Nuovo Ordine!',
-        message: `New pay-later product order from ${orderData.customerName} - ${product.name} x${orderData.quantity} - €${totalAmount.toFixed(2)}`,
-        is_read: false,
-        is_acknowledged: false
+        message: `Nuovo ordine alla consegna da ${orderData.customerName} - ${product.name} x${orderData.quantity} - €${totalAmount.toFixed(2)}`,
+        is_read: false
       });
 
     // ✅ Order saved to database - tracking handled by UnifiedOrderTracker

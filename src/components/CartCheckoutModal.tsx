@@ -148,8 +148,9 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
         status: 'payment_pending', // 🔒 HIDDEN from admin until payment confirmed
         payment_status: 'pending',
         payment_method: 'stripe',
-        user_id: isAuthenticated && user ? user.id : null, // 🎯 ASSOCIATE WITH USER IF AUTHENTICATED
+        notes: `Cart Order - ${cartItems.length} items. Tel: ${customerData.customerPhone || 'N/D'}`,
         metadata: {
+          userId: isAuthenticated && user ? user.id : null,
           deliveryFee,
           estimatedTime: addressValidation.estimatedTime,
           coordinates: addressValidation.coordinates,
@@ -158,7 +159,7 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
             product_id: item.product.id,
             product_name: item.product.name,
             quantity: item.quantity,
-            unit_price: item.product.price,
+            price: item.product.price,
             special_requests: item.specialRequests
           })),
           // 🎯 CLIENT IDENTIFICATION FOR ORDER TRACKING
@@ -167,10 +168,7 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
           sessionId: clientIdentity.sessionId,
           orderCreatedAt: new Date().toISOString(),
           isAuthenticatedOrder: isAuthenticated
-        },
-        special_instructions: `Cart Order - ${cartItems.length} items\n${cartItems.map(item =>
-          `${item.product.name} x${item.quantity}${item.specialRequests ? ` (${item.specialRequests})` : ''}`
-        ).join('\n')}`
+        }
       })
       .select()
       .single();
@@ -363,8 +361,9 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
         status: 'confirmed',
         payment_status: 'pending',
         payment_method: 'cash_on_delivery',
-        user_id: isAuthenticated && user ? user.id : null, // 🎯 ASSOCIATE WITH USER IF AUTHENTICATED
+        notes: `Ordine alla consegna (${cartItems.length} articoli). Tel: ${customerData.customerPhone || 'N/D'}`,
         metadata: {
+          userId: isAuthenticated && user ? user.id : null,
           deliveryFee,
           estimatedTime: addressValidation.estimatedTime,
           coordinates: addressValidation.coordinates,
@@ -373,7 +372,7 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
             product_id: item.product.id,
             product_name: item.product.name,
             quantity: item.quantity,
-            unit_price: item.product.price,
+            price: item.product.price,
             special_requests: item.specialRequests
           })),
           // 🎯 CLIENT IDENTIFICATION FOR ORDER TRACKING
@@ -382,56 +381,29 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
           sessionId: clientIdentity.sessionId,
           orderCreatedAt: new Date().toISOString(),
           isAuthenticatedOrder: isAuthenticated
-        },
-        special_instructions: `Pay Later Cart Order - ${cartItems.length} items\n${cartItems.map(item =>
-          `${item.product.name} x${item.quantity}${item.specialRequests ? ` (${item.specialRequests})` : ''}`
-        ).join('\n')}`
+        }
       })
       .select()
       .single();
 
     if (orderError) {
       console.error('Pay Later Order creation error:', orderError);
-      console.error('Pay Later Order data that failed:', {
-        order_number: orderNumber,
-        customer_name: customerData.customerName,
-        customer_email: customerData.customerEmail,
-        customer_phone: customerData.customerPhone || 'Non fornito',
-        customer_address: customerData.deliveryAddress,
-        delivery_type: 'delivery',
-        total_amount: finalTotal,
-        delivery_fee: deliveryFee,
-        status: 'pending',
-        payment_status: 'pending',
-        payment_method: 'cash_on_delivery'
-      });
       throw new Error(`Errore nella creazione dell'ordine: ${orderError.message}`);
     }
 
-    // Create order items (same as Stripe order)
+    // Create order items matching database schema
     const orderItems = cartItems.map(item => ({
       order_id: order.id,
       product_id: item.product.id,
       product_name: item.product.name,
       product_price: item.product.price,
+      price: item.product.price,
       quantity: item.quantity,
       subtotal: item.product.price * item.quantity,
-      unit_price: item.product.price,
-      special_requests: item.specialRequests
+      metadata: {
+        special_requests: item.specialRequests || null
+      }
     }));
-
-    if (deliveryFee > 0) {
-      orderItems.push({
-        order_id: order.id,
-        product_id: null, // No product ID for delivery fee
-        product_name: 'Delivery Fee',
-        product_price: deliveryFee,
-        quantity: 1,
-        subtotal: deliveryFee,
-        unit_price: deliveryFee,
-        special_requests: `Delivery to: ${addressValidation.formattedAddress}`
-      });
-    }
 
     console.log('🔍 Inserting pay later order items:', orderItems);
     const { error: itemsError } = await supabase
@@ -443,6 +415,17 @@ const CartCheckoutModal: React.FC<CartCheckoutModalProps> = ({
       console.error('❌ Pay later order items data that failed:', orderItems);
       throw new Error(`Errore nella creazione degli articoli dell'ordine: ${itemsError.message}`);
     }
+
+    // Create order notification with correct schema
+    await supabase
+      .from('order_notifications')
+      .insert({
+        order_id: order.id,
+        type: 'new_order',
+        title: 'Nuovo Ordine!',
+        message: `Nuovo ordine alla consegna da ${customerData.customerName} - ${cartItems.length} articoli - €${finalTotal.toFixed(2)}`,
+        is_read: false
+      });
     console.log('✅ Pay later order items created successfully');
 
     // Create notification

@@ -137,8 +137,9 @@ const EnhancedOrderForm = () => {
         customer_address: addressValidation.formattedAddress, // Use customer_address column
         total_amount: totalAmount,
         status: 'confirmed',
-        user_id: isAuthenticated && user ? user.id : null, // 🎯 ASSOCIATE WITH USER IF AUTHENTICATED
+        notes: `Category: ${formData.category}\nProduct: ${formData.productDescription}\nQuantity: ${formData.quantity}\nSpecial Requests: ${formData.specialRequests}`,
         metadata: {
+          userId: isAuthenticated && user ? user.id : null,
           coordinates: addressValidation.coordinates,
           deliveryFee: addressValidation.deliveryFee,
           // 🎯 CLIENT IDENTIFICATION FOR ORDER TRACKING
@@ -147,8 +148,7 @@ const EnhancedOrderForm = () => {
           sessionId: clientIdentity.sessionId,
           orderCreatedAt: new Date().toISOString(),
           isAuthenticatedOrder: isAuthenticated
-        },
-        notes: `Category: ${formData.category}\nProduct: ${formData.productDescription}\nQuantity: ${formData.quantity}\nSpecial Requests: ${formData.specialRequests}`
+        }
       })
       .select()
       .single();

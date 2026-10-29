@@ -372,7 +372,7 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ Stripe server error response:', errorText);
-        throw new Error(`Stripe error: ${response.status} - ${errorText}`);
+        throw new Error("Il pagamento con carta online non è al momento configurato sul server. Seleziona 'Paga alla Consegna' per inviare subito l'ordine.");
       }
 
       const session = await response.json();
@@ -424,14 +424,16 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
         status: 'confirmed',
         payment_status: 'pending',
         payment_method: 'cash_on_delivery',
-        user_id: isAuthenticated && user ? user.id : null, // 🎯 ASSOCIATE WITH USER IF AUTHENTICATED
+        notes: `Ordine alla consegna (${cartItems.length} articoli). Tel: ${customerData.customerPhone || 'N/D'}`,
         metadata: {
-          // 🎯 CLIENT IDENTIFICATION FOR ORDER TRACKING
+          userId: isAuthenticated && user ? user.id : null,
           clientId: clientIdentity.clientId,
           deviceFingerprint: clientIdentity.deviceFingerprint,
           sessionId: clientIdentity.sessionId,
           orderCreatedAt: new Date().toISOString(),
-          isAuthenticatedOrder: isAuthenticated
+          isAuthenticatedOrder: isAuthenticated,
+          deliveryFee: addressValidation?.deliveryFee || 0,
+          estimatedTime: addressValidation?.estimatedTime || 'N/A'
         }
       };
 
@@ -443,7 +445,7 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items matching database schema
       const orderItems = cartItems.map(item => {
         const extrasPrice = item.extras ?
           item.extras.reduce((total, extra) => total + (extra.price * extra.quantity * item.quantity), 0) : 0;
@@ -454,12 +456,12 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
           product_id: item.product.id,
           product_name: item.product.name,
           product_price: item.product.price,
+          price: item.product.price,
           quantity: item.quantity,
           subtotal: itemTotal,
-          unit_price: item.product.price,
-          special_requests: item.specialRequests || null,
-          toppings: item.extras ? item.extras.map(extra => `${extra.name} x${extra.quantity} (+€${extra.price})`) : null,
           metadata: {
+            special_requests: item.specialRequests || null,
+            toppings: item.extras ? item.extras.map(extra => `${extra.name} x${extra.quantity} (+€${extra.price})`) : [],
             extras: item.extras || [],
             base_price: item.product.price * item.quantity,
             extras_price: extrasPrice
@@ -479,16 +481,15 @@ const SimpleCheckoutModal: React.FC<SimpleCheckoutModalProps> = ({
       }
       console.log('✅ SimpleCheckout PayLater: Order items created successfully');
 
-      // Create notification
+      // Create notification with correct schema
       await supabase
         .from('order_notifications')
         .insert({
           order_id: order.id,
-          notification_type: 'new_order',
+          type: 'new_order',
           title: 'Nuovo Ordine!',
-          message: `New pay-later order received from ${customerData.customerName} - ${cartItems.length} items - €${calculateTotal().toFixed(2)}`,
-          is_read: false,
-          is_acknowledged: false
+          message: `Nuovo ordine alla consegna da ${customerData.customerName} - ${cartItems.length} articoli - €${calculateTotal().toFixed(2)}`,
+          is_read: false
         });
 
       // ✅ Order saved to database - tracking handled by UnifiedOrderTracker
