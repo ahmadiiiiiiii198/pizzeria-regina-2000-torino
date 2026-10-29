@@ -20,6 +20,7 @@ interface WeeklyHours {
   friday: DayHours;
   saturday: DayHours;
   sunday: DayHours;
+  manualOverride?: 'open' | 'closed' | 'auto';
 }
 
 interface BusinessHoursResult {
@@ -185,6 +186,26 @@ class BusinessHoursService {
     const todayHours = hours[currentDay];
 
     console.log('🕒 [BusinessHours] Today is:', currentDay, 'Hours:', todayHours);
+
+    // 🎯 MASTER STORE OVERRIDE (Controlled from Sunmi Printer App or Admin)
+    const manualOverride = (hours as any).manualOverride;
+    if (manualOverride === 'open') {
+      console.log('🔓 [BusinessHours] Manual override: FORCE OPEN - restrictions lifted for clients!');
+      return {
+        isOpen: true,
+        message: 'Siamo aperti per ordini online! Puoi effettuare il tuo ordine.',
+        todayHours
+      };
+    }
+
+    if (manualOverride === 'closed') {
+      console.log('🔒 [BusinessHours] Manual override: FORCE CLOSED - ordering restricted!');
+      return {
+        isOpen: false,
+        message: 'La pizzeria è al momento chiusa per ordini online. Riapriremo presto!',
+        todayHours
+      };
+    }
 
     // Check if business is open today (either lunch or dinner)
     const lunchOpen = todayHours.lunch.isOpen;
