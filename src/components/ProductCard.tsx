@@ -34,6 +34,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { addItem } = useSimpleCart();
   const { isProductAvailable, getStockStatus, getStockMessage, isStockManagementEnabled } = useStockManagement();
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Use product data if available, otherwise fall back to legacy props
   const productName = product?.name || name || '';
@@ -130,16 +131,27 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div className="bg-gradient-to-br from-white to-peach-50/30 rounded-xl shadow-lg overflow-hidden group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-peach-100/50">
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden h-64 bg-peach-100/30">
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-gradient-to-br from-peach-100/50 via-orange-50/40 to-peach-200/40 animate-pulse flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-peach-400 border-t-transparent animate-spin opacity-50" />
+          </div>
+        )}
         <img
           src={productImage}
           alt={productName}
-          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+          width={400}
+          height={256}
+          className={`w-full h-64 object-cover group-hover:scale-110 transition-all duration-500 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           loading="lazy"
           decoding="async"
+          onLoad={() => setImageLoaded(true)}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
             target.src = '/placeholder.svg';
+            setImageLoaded(true);
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-peach-900/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

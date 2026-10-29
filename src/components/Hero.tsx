@@ -107,6 +107,7 @@ const Hero = () => {
             muted
             loop
             playsInline
+            preload="metadata"
             className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
               videoLoaded ? 'opacity-100' : 'opacity-0'
             }
