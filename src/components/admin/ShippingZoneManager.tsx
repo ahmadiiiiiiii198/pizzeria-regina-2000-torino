@@ -183,7 +183,7 @@ const ShippingZoneManager = () => {
 
       toast({
         title: 'Settings Saved! ✅',
-        description: `All delivery zone settings have been saved to the database. API Key: ${freshSettings.googleMapsApiKey ? 'Configured' : 'Missing'}`,
+        description: 'All delivery zone settings have been saved to the database. Free OpenStreetMap geocoding is active.',
       });
     } catch (error) {
       console.error('❌ Save error:', error);
@@ -254,20 +254,35 @@ const ShippingZoneManager = () => {
 
           <Separator />
 
-          {/* Google Maps API Key */}
+          {/* Geocoding Provider */}
+          <div className="space-y-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-green-900">Geocoding Service: Free OpenStreetMap (Photon)</h4>
+                <p className="text-xs text-green-700 mt-0.5">
+                  ✓ Active by default — 100% free address validation and distance calculation without requiring any Google Maps API keys or billing.
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                Active & Free
+              </Badge>
+            </div>
+          </div>
+
+          {/* Optional Google Maps API Key */}
           <div className="space-y-1 md:space-y-2">
-            <Label htmlFor="apiKey" className="text-sm font-medium">Google Maps API Key</Label>
+            <Label htmlFor="apiKey" className="text-sm font-medium">Google Maps API Key (Optional)</Label>
             <Input
               id="apiKey"
               type="password"
-              placeholder="Enter your Google Maps API Key"
+              placeholder="Optional: leave blank to use free OpenStreetMap"
               value={settings.googleMapsApiKey}
               onChange={(e) => handleSettingsChange('googleMapsApiKey', e.target.value)}
               disabled={!settings.enabled}
               className="text-sm md:text-base"
             />
             <p className="text-xs md:text-sm text-gray-500">
-              Required for address validation and distance calculation
+              Optional fallback override. If left empty, free OpenStreetMap geocoding is used automatically.
             </p>
           </div>
 

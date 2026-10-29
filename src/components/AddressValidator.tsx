@@ -24,9 +24,21 @@ const AddressValidator = ({ onValidAddress, orderAmount = 0, initialAddress = ''
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load shipping zone settings
-    const currentSettings = shippingZoneService.getSettings();
-    setSettings(currentSettings);
+    let isMounted = true;
+    const loadSettings = async () => {
+      try {
+        const currentSettings = await shippingZoneService.getSettings();
+        if (isMounted) {
+          setSettings(currentSettings);
+        }
+      } catch (e) {
+        console.error('Failed to load shipping settings in AddressValidator', e);
+      }
+    };
+    loadSettings();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {

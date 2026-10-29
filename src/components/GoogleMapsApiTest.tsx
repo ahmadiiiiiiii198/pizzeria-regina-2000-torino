@@ -28,7 +28,7 @@ const GoogleMapsApiTest: React.FC = () => {
   const checkApiKeyStatus = async () => {
     try {
       await shippingZoneService.reloadFromDatabase();
-      const settings = shippingZoneService.getSettings();
+      const settings = await shippingZoneService.getSettings();
       setApiKeyStatus(settings.googleMapsApiKey ? 'present' : 'missing');
     } catch (error) {
       console.error('Failed to check API key status:', error);
